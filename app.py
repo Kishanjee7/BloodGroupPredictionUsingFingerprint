@@ -275,28 +275,33 @@ st.markdown("""
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&display=swap');
 
 /* ═══ Keyframe Animations ═══ */
-@keyframes gradientShift {
+@keyframes gradientBG {
     0% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
 }
-@keyframes slideUp {
-    from { opacity: 0; transform: translateY(15px); }
+@keyframes floatUp {
+    from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
 }
-@keyframes barGrow {
+@keyframes barFill {
     from { width: 0%; }
 }
+@keyframes glowPulse {
+    0% { box-shadow: 0 0 15px rgba(230, 57, 70, 0.4); }
+    50% { box-shadow: 0 0 30px rgba(230, 57, 70, 0.8); }
+    100% { box-shadow: 0 0 15px rgba(230, 57, 70, 0.4); }
+}
 
-/* ═══ Root Variables (High Contrast) ═══ */
+/* ═══ Root Variables (Dark Glassmorphism Theme) ═══ */
 :root {
-    --primary: #E63946;
-    --primary-dark: #B92B37;
-    --text-main: #1E293B;      /* Highly visible dark blue/grey */
-    --text-muted: #475569;
-    --bg-main: #F4F7F9;
-    --bg-card: rgba(255, 255, 255, 0.95);
-    --card-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    --primary: #FF4B4B;
+    --primary-glow: rgba(255, 75, 75, 0.3);
+    --text-main: #F8FAFC;
+    --text-muted: #CBD5E1;
+    --bg-card: rgba(30, 40, 60, 0.6); /* Frosted dark glass */
+    --card-border: rgba(255, 255, 255, 0.1);
+    --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 }
 
 html, body, [class*="css"] {
@@ -304,23 +309,22 @@ html, body, [class*="css"] {
     color: var(--text-main);
 }
 
-/* Override default Streamlit text colors for perfect visibility */
-p, li, span, div {
-    color: var(--text-main);
+/* Force text visibility across Streamlit components */
+p, li, span, div, label {
+    color: var(--text-main) !important;
 }
 
-/* ═══ Clean Background ═══ */
+/* ═══ Animated Overall Background ═══ */
 [data-testid="stAppViewContainer"] {
-    background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+    background: linear-gradient(-45deg, #0f172a, #1e1b4b, #170f1c, #081229);
+    background-size: 400% 400%;
+    animation: gradientBG 15s ease infinite;
 }
 
 /* ═══ Sidebar Styling ═══ */
 [data-testid="stSidebar"] {
-    background: #0F172A !important;
+    background: #0A0E17 !important;
     border-right: 1px solid rgba(255,255,255,0.05);
-}
-[data-testid="stSidebar"] * {
-    color: #F8FAFC !important;
 }
 [data-testid="stSidebar"] hr {
     border-color: rgba(255,255,255,0.1) !important;
@@ -330,16 +334,28 @@ p, li, span, div {
     font-family: 'Poppins', sans-serif;
 }
 
-/* ═══ Hero Banner (Deep Contrast) ═══ */
+/* ═══ Hero Banner ═══ */
 .hero-banner {
-    background: linear-gradient(-45deg, #1D2671, #C33764);
-    background-size: 200% 200%;
-    animation: gradientShift 10s ease infinite;
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--card-border);
     border-radius: 16px;
     padding: 3rem 2rem;
     margin-bottom: 2rem;
     text-align: center;
-    box-shadow: 0 15px 35px rgba(195, 55, 100, 0.2);
+    box-shadow: var(--card-shadow);
+    position: relative;
+    overflow: hidden;
+}
+/* Banner inner glow */
+.hero-banner::before {
+    content: "";
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(circle, rgba(255,75,75,0.1) 0%, transparent 60%);
+    animation: gradientBG 10s ease infinite;
 }
 .hero-banner h1 {
     font-family: 'Poppins', sans-serif;
@@ -347,80 +363,87 @@ p, li, span, div {
     font-size: 2.8rem;
     font-weight: 800;
     margin: 0;
-    text-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    text-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    position: relative;
 }
 .hero-banner p {
-    color: #F8FAFC !important;
+    color: #94A3B8 !important;
     font-size: 1.2rem;
     margin-top: 0.8rem;
     font-weight: 500;
-    opacity: 0.9;
+    position: relative;
 }
 
-/* ═══ Stat Cards ═══ */
+/* ═══ Stat Cards & Boxes (Glassmorphism) ═══ */
 .stat-card {
     background: var(--bg-card);
-    border: 1px solid rgba(0,0,0,0.05);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--card-border);
     border-radius: 12px;
     padding: 1.5rem 1rem;
     text-align: center;
     box-shadow: var(--card-shadow);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    animation: slideUp 0.6s ease forwards;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    animation: floatUp 0.6s ease forwards;
 }
 .stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 35px rgba(15, 23, 42, 0.12);
+    transform: translateY(-8px);
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
 }
 .stat-card-title {
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     font-weight: 700;
-    color: var(--text-main) !important;
-    margin: 8px 0;
+    color: #E2E8F0 !important;
+    margin: 10px 0;
 }
 
 /* ═══ Blood Group Result Badge ═══ */
 .blood-badge {
     display: inline-block;
-    background: linear-gradient(135deg, #E63946, #900C3F);
+    background: linear-gradient(135deg, #FF4B4B, #900C3F);
     color: #FFFFFF !important;
     font-family: 'Poppins', sans-serif;
     font-size: 4rem;
     font-weight: 800;
-    padding: 1rem 3rem;
+    padding: 1rem 3.5rem;
     border-radius: 16px;
-    box-shadow: 0 10px 30px rgba(230,57,70,0.4);
+    animation: glowPulse 3s infinite;
+    border: 2px solid rgba(255,255,255,0.2);
 }
 
 /* ═══ Model Result Cards ═══ */
 .model-card {
     background: var(--bg-card);
+    backdrop-filter: blur(10px);
     border-radius: 12px;
     padding: 1.2rem 1.5rem;
+    border: 1px solid var(--card-border);
     border-left: 5px solid #3B82F6;
     box-shadow: var(--card-shadow);
     margin-bottom: 1rem;
-    animation: slideUp 0.5s ease forwards;
+    animation: floatUp 0.5s ease forwards;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 .model-card.ensemble {
     border-left-color: var(--primary);
-    background: #FFF5F5;
-    border: 1px solid rgba(230,57,70,0.1);
+    background: rgba(255, 75, 75, 0.05);
     border-left-width: 6px;
 }
 .model-card .model-name {
     font-weight: 700;
-    color: var(--text-main) !important;
-    font-size: 1.05rem;
+    color: #FFFFFF !important;
+    font-size: 1.1rem;
 }
 .model-card .model-prediction {
     font-family: 'Poppins', sans-serif;
-    font-size: 1.5rem;
+    font-size: 1.6rem;
     font-weight: 800;
     color: var(--primary) !important;
+    text-shadow: 0 2px 10px rgba(255,75,75,0.3);
 }
 
 /* ═══ Status Pill ═══ */
@@ -433,87 +456,105 @@ p, li, span, div {
     text-transform: uppercase;
 }
 .status-pill.loaded {
-    background: #DCFCE7;
-    color: #166534 !important;
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ADE80 !important;
+    border: 1px solid rgba(74, 222, 128, 0.3);
 }
 .status-pill.unavailable {
-    background: #FEE2E2;
-    color: #991B1B !important;
+    background: rgba(239, 68, 68, 0.2);
+    color: #F87171 !important;
+    border: 1px solid rgba(248, 113, 113, 0.3);
 }
 
 /* ═══ Probability Bars ═══ */
 .prob-bar-container {
-    margin: 12px 0;
-    animation: slideUp 0.5s ease forwards;
+    margin: 14px 0;
+    animation: floatUp 0.5s ease forwards;
 }
 .prob-bar-bg {
-    background: #E2E8F0;
+    background: rgba(0, 0, 0, 0.4);
     border-radius: 8px;
     height: 18px;
     overflow: hidden;
     position: relative;
+    border: 1px solid rgba(255,255,255,0.05);
 }
 .prob-bar-fill {
     height: 100%;
     border-radius: 8px;
-    animation: barGrow 1s cubic-bezier(0.1, 0.8, 0.2, 1) forwards;
+    animation: barFill 1.2s cubic-bezier(0.1, 0.8, 0.2, 1) forwards;
+    box-shadow: 0 0 10px rgba(255,255,255,0.2);
 }
 .prob-bar-label {
     display: flex;
     justify-content: space-between;
     font-size: 0.95rem;
-    color: var(--text-main) !important;
+    color: #E2E8F0 !important;
     font-weight: 600;
     margin-bottom: 6px;
 }
 
 /* ═══ Upload Area ═══ */
 [data-testid="stFileUploader"] {
-    border: 2px dashed #94A3B8 !important;
+    border: 2px dashed rgba(255, 255, 255, 0.3) !important;
     border-radius: 16px !important;
     padding: 2rem !important;
-    background: #FFFFFF !important;
+    background: rgba(0, 0, 0, 0.2) !important;
+    backdrop-filter: blur(5px);
 }
 [data-testid="stFileUploader"]:hover {
     border-color: var(--primary) !important;
-    background: #F8FAFC !important;
+    background: rgba(255, 75, 75, 0.05) !important;
 }
 
 /* ═══ Buttons ═══ */
 [data-testid="stBaseButton-primary"] {
-    background: linear-gradient(135deg, #E63946, #B92B37) !important;
+    background: linear-gradient(135deg, #FF4B4B, #900C3F) !important;
     color: #FFFFFF !important;
-    border: none !important;
-    border-radius: 10px !important;
+    border: 1px solid rgba(255,255,255,0.2) !important;
+    border-radius: 12px !important;
     padding: 1.5rem !important;
     font-weight: 800 !important;
     font-size: 1.2rem !important;
-    box-shadow: 0 8px 20px rgba(230,57,70,0.25) !important;
+    box-shadow: 0 8px 25px rgba(255, 75, 75, 0.3) !important;
     transition: transform 0.2s, box-shadow 0.2s !important;
 }
 [data-testid="stBaseButton-primary"]:hover {
-    transform: translateY(-2px) !important;
-    box-shadow: 0 12px 25px rgba(230,57,70,0.35) !important;
+    transform: translateY(-3px) !important;
+    box-shadow: 0 12px 30px rgba(255, 75, 75, 0.5) !important;
+}
+
+/* ═══ Image Preview Area (Added Borders for neatness) ═══ */
+[data-testid="stImage"] img {
+    border-radius: 12px;
+    border: 2px solid rgba(255,255,255,0.1);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
 }
 
 /* ═══ Headers ═══ */
 h1, h2, h3 {
-    color: #0F172A !important;
+    color: #FFFFFF !important;
     font-family: 'Poppins', sans-serif !important;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 
 /* ═══ Footer ═══ */
 .footer-text {
     text-align: center;
-    color: var(--text-muted) !important;
+    color: #94A3B8 !important;
     font-size: 0.9rem;
-    margin-top: 3rem;
+    margin-top: 4rem;
     font-weight: 500;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    padding-top: 1.5rem;
 }
 .footer-text a {
-    color: #2563EB !important;
+    color: #60A5FA !important;
     text-decoration: none;
     font-weight: 700;
+}
+.footer-text a:hover {
+    color: #93C5FD !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -567,7 +608,7 @@ except Exception as e:
 st.markdown("""
 <div class="hero-banner">
     <h1>Blood Group Prediction Using Fingerprint</h1>
-    <p>Multi-model system that analyzes fingerprint ridge patterns to predict your blood group</p>
+    <p>Multi-model AI system analyzing fingerprint ridge patterns</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -585,7 +626,7 @@ for col, (name, loaded, icon) in zip(status_cols, model_statuses):
     status_text = "Ready" if loaded else "N/A"
     col.markdown(f"""
     <div class="stat-card">
-        <div style="font-size:2rem; margin-bottom:8px;">{icon}</div>
+        <div style="font-size:2.2rem; margin-bottom:8px;">{icon}</div>
         <div class="stat-card-title">{name}</div>
         <span class="status-pill {status_cls}">{status_text}</span>
     </div>
@@ -606,16 +647,18 @@ if uploaded is not None:
     orig = cv2.resize(orig, IMG_SIZE)
     enhanced = enhance_fingerprint(orig)
 
-    st.markdown("### 🔍 Image Preview")
-    c1, c2 = st.columns(2)
+    st.markdown("<h3 style='text-align: center; margin-top: 20px;'>🔍 Image Preview</h3>", unsafe_allow_html=True)
+    
+    # Reduced image size by using [1, 2, 2, 1] layout so the images occupy only the middle 50%
+    col_spacer1, c1, c2, col_spacer2 = st.columns([1, 2, 2, 1])
     with c1:
-        st.image(orig, caption="📷 Original Fingerprint", use_container_width=True, clamp=True)
+        st.image(orig, caption="📷 Original Fingerprint") # Removed use_container_width to keep it compact
     with c2:
-        st.image(enhanced, caption="✨ Enhanced Fingerprint", use_container_width=True, clamp=True)
+        st.image(enhanced, caption="✨ Enhanced Fingerprint")
 
     st.write("") 
 
-    col_l, col_btn, col_r = st.columns([1, 2, 1])
+    col_l, col_btn, col_r = st.columns([1.5, 2, 1.5])
     with col_btn:
         predict_clicked = st.button("🔬 Analyze Fingerprint", use_container_width=True, type="primary")
 
@@ -658,8 +701,8 @@ if uploaded is not None:
             st.markdown(f"""
             <div style="text-align:center; padding:1.5rem 0;">
                 <div class="blood-badge">{final_label}</div>
-                <div style="margin-top:16px; font-size:1.3rem; color:var(--text-main); font-weight: 600;">
-                    Confidence: <strong style="color:#E63946;">{final_conf:.1f}%</strong>
+                <div style="margin-top:20px; font-size:1.4rem; color:#FFFFFF; font-weight: 600;">
+                    Confidence: <strong style="color:#FF4B4B;">{final_conf:.1f}%</strong>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -693,7 +736,7 @@ if uploaded is not None:
                     </div>
                     <div style="text-align:right;">
                         <span class="model-prediction">{label}</span>
-                        <div style="font-size:0.85rem; color:var(--text-muted); font-weight: 600;">{conf:.1f}%</div>
+                        <div style="font-size:0.9rem; color:#94A3B8; font-weight: 600;">{conf:.1f}%</div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -703,7 +746,7 @@ if uploaded is not None:
             st.markdown("### 📈 Probability Breakdown")
 
             sorted_indices = np.argsort(p_ens)[::-1]
-            colors = ["#E63946", "#F59E0B", "#3B82F6", "#10B981", "#8B5CF6", "#EC4899", "#14B8A6", "#64748B"]
+            colors = ["#FF4B4B", "#F59E0B", "#3B82F6", "#10B981", "#8B5CF6", "#EC4899", "#14B8A6", "#64748B"]
 
             prob_html = ""
             for rank, idx in enumerate(sorted_indices):
@@ -747,10 +790,10 @@ if uploaded is not None:
 else:
     # ── Empty State ──
     st.markdown("""
-    <div style="text-align:center; padding:4rem 1rem;">
-        <div style="font-size:4.5rem; margin-bottom:1rem;">👆</div>
-        <h3 style="color:#0F172A; margin-bottom:0.5rem;">Upload a Fingerprint Image</h3>
-        <p style="color:#475569; font-size:1.1rem; font-weight: 500;">
+    <div style="text-align:center; padding:5rem 1rem;">
+        <div style="font-size:5rem; margin-bottom:1rem; animation: floatUp 2s infinite alternate;">👆</div>
+        <h3 style="color:#FFFFFF; margin-bottom:0.5rem;">Upload a Fingerprint Image</h3>
+        <p style="color:#94A3B8; font-size:1.15rem; font-weight: 500;">
             Drag and drop or click above to upload a fingerprint image.<br>
             The AI will analyze the ridge patterns and predict the blood group.
         </p>
