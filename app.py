@@ -325,100 +325,241 @@ st.set_page_config(
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&display=swap');
 
-/* Root variables */
+/* ═══ Keyframe Animations ═══ */
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+@keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.6; }
+    50% { transform: translateY(-20px) rotate(5deg); opacity: 1; }
+}
+@keyframes pulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(230,57,70,0.3); }
+    50% { box-shadow: 0 0 40px rgba(230,57,70,0.6), 0 0 60px rgba(230,57,70,0.2); }
+}
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+@keyframes barGrow {
+    from { width: 0%; }
+}
+@keyframes ripple {
+    0% { transform: scale(1); opacity: 0.4; }
+    100% { transform: scale(1.5); opacity: 0; }
+}
+
+/* ═══ Root Variables ═══ */
 :root {
     --primary: #E63946;
     --primary-dark: #C1121F;
+    --primary-glow: rgba(230,57,70,0.3);
     --accent: #457B9D;
     --accent-light: #A8DADC;
+    --accent-vivid: #2EC4B6;
     --dark: #1D3557;
+    --dark-rich: #0D1B2A;
     --light: #F1FAEE;
-    --bg-card: rgba(255,255,255,0.85);
+    --warm: #F4A261;
+    --warm-dark: #E76F51;
+    --purple: #6C63FF;
+    --bg-card: rgba(255,255,255,0.92);
+    --bg-glass: rgba(255,255,255,0.15);
 }
 
 html, body, [class*="css"] {
     font-family: 'Inter', sans-serif;
 }
 
-/* Hero gradient banner */
+/* ═══ Animated Background ═══ */
+[data-testid="stAppViewContainer"] {
+    background: linear-gradient(-45deg, #F1FAEE, #E8F4F8, #FFF0E8, #F0E6FF, #E8F8F0);
+    background-size: 400% 400%;
+    animation: gradientShift 15s ease infinite;
+}
+
+/* Floating particles via pseudo-elements on main block */
+[data-testid="stAppViewContainer"]::before {
+    content: '';
+    position: fixed;
+    top: 10%;
+    left: 5%;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(230,57,70,0.08) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: float 8s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 0;
+}
+[data-testid="stAppViewContainer"]::after {
+    content: '';
+    position: fixed;
+    bottom: 15%;
+    right: 10%;
+    width: 250px;
+    height: 250px;
+    background: radial-gradient(circle, rgba(69,123,157,0.08) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: float 10s ease-in-out infinite reverse;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* ═══ Sidebar Styling ═══ */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #0D1B2A 0%, #1D3557 60%, #264573 100%) !important;
+}
+[data-testid="stSidebar"] * {
+    color: #E0E8F0 !important;
+}
+[data-testid="stSidebar"] hr {
+    border-color: rgba(168,218,220,0.2) !important;
+}
+[data-testid="stSidebar"] strong {
+    color: #A8DADC !important;
+}
+[data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
+    color: white !important;
+}
+
+/* ═══ Hero Banner ═══ */
 .hero-banner {
-    background: linear-gradient(135deg, #1D3557 0%, #457B9D 50%, #E63946 100%);
-    border-radius: 16px;
-    padding: 2.5rem 2rem;
+    background: linear-gradient(-45deg, #0D1B2A, #1D3557, #457B9D, #E63946, #F4A261);
+    background-size: 300% 300%;
+    animation: gradientShift 8s ease infinite;
+    border-radius: 20px;
+    padding: 3rem 2rem;
     margin-bottom: 1.5rem;
     text-align: center;
-    box-shadow: 0 8px 32px rgba(29,53,87,0.25);
+    box-shadow: 0 12px 40px rgba(29,53,87,0.3);
+    position: relative;
+    overflow: hidden;
+}
+.hero-banner::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px);
+    background-size: 30px 30px;
+    animation: float 20s linear infinite;
+    pointer-events: none;
 }
 .hero-banner h1 {
+    font-family: 'Poppins', sans-serif;
     color: white;
-    font-size: 2.2rem;
+    font-size: 2.4rem;
     font-weight: 800;
     margin: 0;
     letter-spacing: -0.5px;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    position: relative;
+    z-index: 1;
 }
 .hero-banner p {
-    color: #A8DADC;
-    font-size: 1.05rem;
-    margin: 0.5rem 0 0 0;
+    color: rgba(168,218,220,0.9);
+    font-size: 1.1rem;
+    margin: 0.6rem 0 0 0;
     font-weight: 400;
+    position: relative;
+    z-index: 1;
 }
 
-/* Stat cards */
+/* ═══ Stat Cards ═══ */
 .stat-card {
     background: var(--bg-card);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(168,218,220,0.3);
-    border-radius: 12px;
-    padding: 1.2rem 1rem;
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(168,218,220,0.25);
+    border-radius: 16px;
+    padding: 1.3rem 1rem;
     text-align: center;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.06);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: slideUp 0.6s ease forwards;
+    position: relative;
+    overflow: hidden;
+}
+.stat-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--primary), var(--warm));
+    background-size: 200% 100%;
+    animation: shimmer 3s ease infinite;
 }
 .stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.1);
-}
-.stat-card .stat-value {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: var(--primary);
-    line-height: 1.2;
-}
-.stat-card .stat-label {
-    font-size: 0.8rem;
-    color: #666;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-top: 4px;
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 8px 30px rgba(69,123,157,0.15);
+    border-color: var(--accent-light);
 }
 
-/* Blood group result badge */
+/* ═══ Blood Group Result Badge ═══ */
 .blood-badge {
     display: inline-block;
-    background: linear-gradient(135deg, #E63946, #C1121F);
+    background: linear-gradient(135deg, #E63946, #C1121F, #E63946);
+    background-size: 200% 200%;
+    animation: gradientShift 3s ease infinite, pulse 2s ease-in-out infinite;
     color: white;
-    font-size: 3rem;
-    font-weight: 800;
-    padding: 0.6rem 2rem;
-    border-radius: 16px;
-    box-shadow: 0 6px 25px rgba(230,57,70,0.35);
-    letter-spacing: 1px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 3.5rem;
+    font-weight: 900;
+    padding: 0.7rem 2.5rem;
+    border-radius: 20px;
+    letter-spacing: 2px;
     margin: 0.5rem 0;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    position: relative;
+}
+.blood-badge::before {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 23px;
+    background: linear-gradient(135deg, #E63946, #F4A261, #E63946);
+    z-index: -1;
+    animation: gradientShift 4s ease infinite;
+    background-size: 200% 200%;
 }
 
-/* Model result cards */
+/* ═══ Model Result Cards ═══ */
 .model-card {
     background: var(--bg-card);
-    border-radius: 12px;
-    padding: 1rem 1.2rem;
+    border-radius: 14px;
+    padding: 1rem 1.4rem;
     border-left: 4px solid var(--accent);
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    margin-bottom: 0.6rem;
+    box-shadow: 0 3px 15px rgba(0,0,0,0.05);
+    margin-bottom: 0.7rem;
+    transition: all 0.3s ease;
+    animation: slideUp 0.5s ease forwards;
+}
+.model-card:hover {
+    transform: translateX(6px);
+    box-shadow: 0 5px 20px rgba(69,123,157,0.12);
+    border-left-width: 6px;
 }
 .model-card.ensemble {
     border-left-color: var(--primary);
-    background: linear-gradient(135deg, rgba(230,57,70,0.05), rgba(255,255,255,0.9));
+    background: linear-gradient(135deg, rgba(230,57,70,0.04), rgba(244,162,97,0.04), rgba(255,255,255,0.95));
+    border-left-width: 5px;
+}
+.model-card.ensemble:hover {
+    box-shadow: 0 5px 25px rgba(230,57,70,0.12);
 }
 .model-card .model-name {
     font-weight: 600;
@@ -426,88 +567,175 @@ html, body, [class*="css"] {
     font-size: 0.95rem;
 }
 .model-card .model-prediction {
-    font-size: 1.2rem;
+    font-family: 'Poppins', sans-serif;
+    font-size: 1.3rem;
     font-weight: 700;
     color: var(--primary);
 }
 .model-card .model-conf {
     font-size: 0.85rem;
-    color: #666;
+    color: #888;
 }
 
-/* Status pill */
+/* ═══ Status Pill ═══ */
 .status-pill {
     display: inline-block;
-    font-size: 0.7rem;
-    font-weight: 600;
-    padding: 2px 10px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 3px 12px;
     border-radius: 20px;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.8px;
 }
-.status-pill.loaded { background: #D4EDDA; color: #155724; }
-.status-pill.unavailable { background: #F8D7DA; color: #721C24; }
+.status-pill.loaded {
+    background: linear-gradient(135deg, #D4EDDA, #C3E6CB);
+    color: #155724;
+    box-shadow: 0 2px 6px rgba(40,167,69,0.15);
+}
+.status-pill.unavailable {
+    background: linear-gradient(135deg, #F8D7DA, #F1AEB5);
+    color: #721C24;
+}
 
-/* Progress bar */
+/* ═══ Probability Bars ═══ */
 .prob-bar-container {
-    margin: 4px 0;
+    margin: 6px 0;
+    animation: slideUp 0.5s ease forwards;
 }
 .prob-bar-bg {
-    background: #E9ECEF;
-    border-radius: 8px;
-    height: 24px;
+    background: linear-gradient(90deg, #E9ECEF, #F8F9FA);
+    border-radius: 10px;
+    height: 28px;
     overflow: hidden;
     position: relative;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.08);
 }
 .prob-bar-fill {
     height: 100%;
-    border-radius: 8px;
-    transition: width 0.8s ease;
+    border-radius: 10px;
+    animation: barGrow 1s ease forwards;
     display: flex;
     align-items: center;
-    padding-left: 8px;
+    padding-left: 10px;
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 700;
     color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    position: relative;
+    overflow: hidden;
+}
+.prob-bar-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255,255,255,0.2),
+        transparent
+    );
+    animation: shimmer 2s ease infinite;
+    background-size: 200% 100%;
 }
 .prob-bar-label {
     display: flex;
     justify-content: space-between;
-    font-size: 0.8rem;
-    color: #555;
-    margin-bottom: 2px;
+    font-size: 0.82rem;
+    color: #444;
+    margin-bottom: 3px;
+    font-weight: 500;
 }
 
-/* Upload area styling */
+/* ═══ Upload Area ═══ */
 [data-testid="stFileUploader"] {
-    border: 2px dashed var(--accent-light) !important;
-    border-radius: 16px !important;
-    padding: 1rem !important;
+    border: 2px dashed var(--accent) !important;
+    border-radius: 20px !important;
+    padding: 1.2rem !important;
+    background: rgba(69,123,157,0.03) !important;
+    transition: all 0.3s ease !important;
+}
+[data-testid="stFileUploader"]:hover {
+    border-color: var(--primary) !important;
+    background: rgba(230,57,70,0.03) !important;
+    box-shadow: 0 4px 20px rgba(230,57,70,0.08) !important;
 }
 
-/* Section divider */
+/* ═══ Section Divider ═══ */
 .section-divider {
     border: none;
     height: 2px;
-    background: linear-gradient(to right, transparent, var(--accent-light), transparent);
-    margin: 1.5rem 0;
+    background: linear-gradient(to right, transparent, var(--accent-light), var(--primary), var(--accent-light), transparent);
+    margin: 1.8rem 0;
+    opacity: 0.6;
 }
 
-/* Image container */
-.img-container {
-    border-radius: 12px;
+/* ═══ Image Preview ═══ */
+[data-testid="stImage"] {
+    border-radius: 14px;
     overflow: hidden;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    border: 2px solid var(--accent-light);
+    box-shadow: 0 6px 25px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
+}
+[data-testid="stImage"]:hover {
+    transform: scale(1.02);
 }
 
-/* Footer style */
+/* ═══ Buttons ═══ */
+[data-testid="stBaseButton-primary"] {
+    background: linear-gradient(135deg, #E63946, #C1121F) !important;
+    border: none !important;
+    border-radius: 14px !important;
+    padding: 0.7rem 2rem !important;
+    font-weight: 700 !important;
+    font-size: 1.05rem !important;
+    letter-spacing: 0.5px !important;
+    box-shadow: 0 4px 15px rgba(230,57,70,0.3) !important;
+    transition: all 0.3s ease !important;
+}
+[data-testid="stBaseButton-primary"]:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 25px rgba(230,57,70,0.4) !important;
+}
+
+/* ═══ Empty State ═══ */
+.empty-state {
+    text-align: center;
+    padding: 3.5rem 1rem;
+    animation: fadeIn 1s ease;
+}
+.empty-state .empty-icon {
+    font-size: 4.5rem;
+    margin-bottom: 1rem;
+    animation: float 3s ease-in-out infinite;
+}
+
+/* ═══ Footer ═══ */
 .footer-text {
     text-align: center;
-    color: #999;
+    color: #aaa;
     font-size: 0.8rem;
-    margin-top: 2rem;
-    padding: 1rem 0;
+    margin-top: 2.5rem;
+    padding: 1.2rem 0;
+    border-top: 1px solid rgba(168,218,220,0.2);
+}
+.footer-text a {
+    color: var(--accent) !important;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s;
+}
+.footer-text a:hover {
+    color: var(--primary) !important;
+}
+
+/* ═══ Section Headers ═══ */
+[data-testid="stMarkdown"] h3 {
+    color: var(--dark) !important;
+    font-family: 'Poppins', sans-serif !important;
+    font-weight: 700 !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -560,8 +788,8 @@ except Exception as e:
 # ── Hero Banner ──
 st.markdown("""
 <div class="hero-banner">
-    <h1>🩸 Fingerprint Blood Group Prediction</h1>
-    <p>Multi-model AI system analyzing fingerprint patterns to predict blood groups</p>
+    <h1>🩸 Blood Group Prediction Using Fingerprint</h1>
+    <p>AI-powered multi-model system that analyzes fingerprint ridge patterns to predict your blood group</p>
 </div>
 """, unsafe_allow_html=True)
 
