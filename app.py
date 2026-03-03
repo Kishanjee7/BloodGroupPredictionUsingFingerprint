@@ -426,7 +426,7 @@ html, body, [class*="css"] {
     color: white !important;
 }
 [data-testid="stSidebar"] hr {
-    border-color: rgba(168,218,220,0.2) !important;
+    border-color: #d70f32 !important;
 }
 [data-testid="stSidebar"] strong {
     color: #A8DADC !important;
