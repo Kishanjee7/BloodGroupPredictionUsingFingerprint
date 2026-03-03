@@ -1,4 +1,4 @@
-import os
+﻿import os
 import cv2
 import json
 import zipfile
@@ -429,7 +429,7 @@ html, body, [class*="css"] {
     border-color: rgba(168,218,220,0.2) !important;
 }
 [data-testid="stSidebar"] strong {
-    color: red !important;
+    color: #A8DADC !important;
 }
 [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
     color: white !important;
