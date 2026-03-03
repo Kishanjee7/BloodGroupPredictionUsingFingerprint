@@ -429,7 +429,7 @@ html, body, [class*="css"] {
     border-color: #d70f32 !important;
 }
 [data-testid="stSidebar"] strong {
-    color: #A8DADC !important;
+    color: green !important;
 }
 [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
     color: #d70f32 !important;
