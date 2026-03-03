@@ -423,13 +423,13 @@ html, body, [class*="css"] {
     background: linear-gradient(180deg, #0D1B2A 0%, #1D3557 60%, #264573 100%) !important;
 }
 [data-testid="stSidebar"] * {
-    color: red !important;
+    color: #E0E8F0 !important;
 }
 [data-testid="stSidebar"] hr {
     border-color: rgba(168,218,220,0.2) !important;
 }
 [data-testid="stSidebar"] strong {
-    color: #A8DADC !important;
+    color: red !important;
 }
 [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
     color: red !important;
