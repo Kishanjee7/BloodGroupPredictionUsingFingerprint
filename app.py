@@ -432,7 +432,7 @@ html, body, [class*="css"] {
     color: red !important;
 }
 [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
-    color: red !important;
+    color: white !important;
 }
 
 /* ═══ Hero Banner ═══ */
