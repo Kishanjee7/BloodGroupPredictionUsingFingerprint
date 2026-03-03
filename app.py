@@ -1,4 +1,4 @@
-﻿import os
+import os
 import cv2
 import json
 import zipfile
@@ -788,8 +788,8 @@ except Exception as e:
 # ── Hero Banner ──
 st.markdown("""
 <div class="hero-banner">
-    <h1>🩸 Blood Group Prediction Using Fingerprint</h1>
-    <p>AI-powered multi-model system that analyzes fingerprint ridge patterns to predict your blood group</p>
+    <h1>Blood Group Prediction Using Fingerprint</h1>
+    <p>Multi-model system that analyzes fingerprint ridge patterns to predict your blood group</p>
 </div>
 """, unsafe_allow_html=True)
 
