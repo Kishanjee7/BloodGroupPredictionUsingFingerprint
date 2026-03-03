@@ -314,30 +314,285 @@ def load_artifacts():
 # -----------------------
 # UI
 # -----------------------
-st.set_page_config(page_title="Blood Group Predictor (All Models)", layout="centered")
-st.title("Fingerprint Blood Group Prediction (All Models)")
+st.set_page_config(
+    page_title="Blood Group Predictor",
+    page_icon="🩸",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
-with st.expander("Runtime diagnostics"):
-    st.write(f"TensorFlow version: {tf.__version__}")
-    st.write(f"Standalone keras available: {standalone_keras is not None}")
-    st.write(f"Model directory: {MODEL_DIR}")
-    diag_rows = []
-    for k, p in PATHS.items():
-        diag_rows.append({"artifact": k, "path": p, "exists": os.path.exists(p)})
-    st.dataframe(pd.DataFrame(diag_rows), use_container_width=True)
+# ── Custom CSS ──
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
+/* Root variables */
+:root {
+    --primary: #E63946;
+    --primary-dark: #C1121F;
+    --accent: #457B9D;
+    --accent-light: #A8DADC;
+    --dark: #1D3557;
+    --light: #F1FAEE;
+    --bg-card: rgba(255,255,255,0.85);
+}
+
+html, body, [class*="css"] {
+    font-family: 'Inter', sans-serif;
+}
+
+/* Hero gradient banner */
+.hero-banner {
+    background: linear-gradient(135deg, #1D3557 0%, #457B9D 50%, #E63946 100%);
+    border-radius: 16px;
+    padding: 2.5rem 2rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(29,53,87,0.25);
+}
+.hero-banner h1 {
+    color: white;
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: -0.5px;
+}
+.hero-banner p {
+    color: #A8DADC;
+    font-size: 1.05rem;
+    margin: 0.5rem 0 0 0;
+    font-weight: 400;
+}
+
+/* Stat cards */
+.stat-card {
+    background: var(--bg-card);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(168,218,220,0.3);
+    border-radius: 12px;
+    padding: 1.2rem 1rem;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+}
+.stat-card .stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--primary);
+    line-height: 1.2;
+}
+.stat-card .stat-label {
+    font-size: 0.8rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 4px;
+}
+
+/* Blood group result badge */
+.blood-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #E63946, #C1121F);
+    color: white;
+    font-size: 3rem;
+    font-weight: 800;
+    padding: 0.6rem 2rem;
+    border-radius: 16px;
+    box-shadow: 0 6px 25px rgba(230,57,70,0.35);
+    letter-spacing: 1px;
+    margin: 0.5rem 0;
+}
+
+/* Model result cards */
+.model-card {
+    background: var(--bg-card);
+    border-radius: 12px;
+    padding: 1rem 1.2rem;
+    border-left: 4px solid var(--accent);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    margin-bottom: 0.6rem;
+}
+.model-card.ensemble {
+    border-left-color: var(--primary);
+    background: linear-gradient(135deg, rgba(230,57,70,0.05), rgba(255,255,255,0.9));
+}
+.model-card .model-name {
+    font-weight: 600;
+    color: var(--dark);
+    font-size: 0.95rem;
+}
+.model-card .model-prediction {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+.model-card .model-conf {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+/* Status pill */
+.status-pill {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.status-pill.loaded { background: #D4EDDA; color: #155724; }
+.status-pill.unavailable { background: #F8D7DA; color: #721C24; }
+
+/* Progress bar */
+.prob-bar-container {
+    margin: 4px 0;
+}
+.prob-bar-bg {
+    background: #E9ECEF;
+    border-radius: 8px;
+    height: 24px;
+    overflow: hidden;
+    position: relative;
+}
+.prob-bar-fill {
+    height: 100%;
+    border-radius: 8px;
+    transition: width 0.8s ease;
+    display: flex;
+    align-items: center;
+    padding-left: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+}
+.prob-bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: #555;
+    margin-bottom: 2px;
+}
+
+/* Upload area styling */
+[data-testid="stFileUploader"] {
+    border: 2px dashed var(--accent-light) !important;
+    border-radius: 16px !important;
+    padding: 1rem !important;
+}
+
+/* Section divider */
+.section-divider {
+    border: none;
+    height: 2px;
+    background: linear-gradient(to right, transparent, var(--accent-light), transparent);
+    margin: 1.5rem 0;
+}
+
+/* Image container */
+.img-container {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    border: 2px solid var(--accent-light);
+}
+
+/* Footer style */
+.footer-text {
+    text-align: center;
+    color: #999;
+    font-size: 0.8rem;
+    margin-top: 2rem;
+    padding: 1rem 0;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ── Sidebar ──
+with st.sidebar:
+    st.markdown("## 🩸 Blood Group Predictor")
+    st.markdown("---")
+
+    st.markdown("### 📋 How to Use")
+    st.markdown("""
+    1. **Upload** a fingerprint image
+    2. **Preview** original & enhanced images
+    3. Click **🔬 Analyze Fingerprint**
+    4. View predictions from **5 models**
+    """)
+
+    st.markdown("---")
+    st.markdown("### 🧠 Models")
+    model_info = {
+        "RF-HOG": "Random Forest on HOG features",
+        "RF-Gabor": "Random Forest on Gabor features",
+        "CNN": "Custom convolutional neural network",
+        "MobileNetV2": "Transfer learning (pretrained)",
+        "Ensemble": "Stacking meta-learner (final)",
+    }
+    for name, desc in model_info.items():
+        st.markdown(f"**{name}** — {desc}")
+
+    st.markdown("---")
+    st.markdown("### 🩸 Supported Blood Groups")
+    st.markdown("`A+` `A-` `B+` `B-` `AB+` `AB-` `O+` `O-`")
+
+    st.markdown("---")
+    with st.expander("⚙️ Runtime diagnostics"):
+        st.caption(f"TensorFlow: {tf.__version__}")
+        st.caption(f"Keras available: {standalone_keras is not None}")
+        diag_rows = []
+        for k, p in PATHS.items():
+            diag_rows.append({"artifact": k, "exists": "✅" if os.path.exists(p) else "❌"})
+        st.dataframe(pd.DataFrame(diag_rows), use_container_width=True, hide_index=True)
+
+# ── Load models ──
 try:
     rf_hog, rf_gabor, cnn_model, mnet_model, ensemble_model, label_encoder, cnn_err, mnet_err = load_artifacts()
 except Exception as e:
-    st.error(f"Model loading failed: {e}")
+    st.error(f"⚠️ Model loading failed: {e}")
     st.stop()
 
-if cnn_err:
-    st.warning(f"CNN unavailable: {cnn_err}")
-if mnet_err:
-    st.warning(f"MobileNetV2 unavailable: {mnet_err}")
+# ── Hero Banner ──
+st.markdown("""
+<div class="hero-banner">
+    <h1>🩸 Fingerprint Blood Group Prediction</h1>
+    <p>Multi-model AI system analyzing fingerprint patterns to predict blood groups</p>
+</div>
+""", unsafe_allow_html=True)
 
-uploaded = st.file_uploader("Upload fingerprint image", type=["png", "jpg", "jpeg", "bmp"])
+# ── Model status indicators ──
+status_cols = st.columns(5)
+model_statuses = [
+    ("RF-HOG", True, "🌲"),
+    ("RF-Gabor", True, "🌀"),
+    ("CNN", cnn_model is not None, "🧠"),
+    ("MobileNetV2", mnet_model is not None, "📱"),
+    ("Ensemble", True, "🎯"),
+]
+for col, (name, loaded, icon) in zip(status_cols, model_statuses):
+    status_cls = "loaded" if loaded else "unavailable"
+    status_text = "Ready" if loaded else "N/A"
+    col.markdown(f"""
+    <div class="stat-card">
+        <div style="font-size:1.5rem;">{icon}</div>
+        <div style="font-size:0.85rem;font-weight:600;color:#1D3557;margin:4px 0;">{name}</div>
+        <span class="status-pill {status_cls}">{status_text}</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
+
+# ── Upload ──
+uploaded = st.file_uploader(
+    "📤 Upload a fingerprint image",
+    type=["png", "jpg", "jpeg", "bmp"],
+    help="Supported formats: PNG, JPG, JPEG, BMP — max 200MB"
+)
 
 if uploaded is not None:
     pil_img = Image.open(uploaded).convert("L")
@@ -345,72 +600,171 @@ if uploaded is not None:
     orig = cv2.resize(orig, IMG_SIZE)
     enhanced = enhance_fingerprint(orig)
 
+    st.markdown("### 🔍 Image Preview")
     c1, c2 = st.columns(2)
     with c1:
-        st.image(orig, caption="Original", use_container_width=True, clamp=True)
+        st.image(orig, caption="📷 Original Fingerprint", use_container_width=True, clamp=True)
     with c2:
-        st.image(enhanced, caption="Enhanced", use_container_width=True, clamp=True)
+        st.image(enhanced, caption="✨ Enhanced Fingerprint", use_container_width=True, clamp=True)
 
-    if st.button("Predict"):
+    st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
+
+    # Centered predict button
+    col_l, col_btn, col_r = st.columns([1, 2, 1])
+    with col_btn:
+        predict_clicked = st.button("🔬 Analyze Fingerprint", use_container_width=True, type="primary")
+
+    if predict_clicked:
         classes = label_encoder.classes_
         n_cls = len(classes)
 
-        # Classical model probs
-        p_rf_hog = rf_hog.predict_proba(get_hog_feature(enhanced))[0]
-        p_rf_gabor = rf_gabor.predict_proba(get_gabor_feature(enhanced))[0]
+        with st.spinner("🧬 Running analysis across all models..."):
+            # Classical model probs
+            p_rf_hog = rf_hog.predict_proba(get_hog_feature(enhanced))[0]
+            p_rf_gabor = rf_gabor.predict_proba(get_gabor_feature(enhanced))[0]
 
-        # Deep model probs (or zeros if unavailable)
-        if cnn_model is not None:
-            p_cnn = cnn_model.predict(prep_cnn_input(enhanced), verbose=0)[0]
-        else:
-            p_cnn = np.zeros(n_cls, dtype=np.float32)
+            # Deep model probs
+            if cnn_model is not None:
+                p_cnn = cnn_model.predict(prep_cnn_input(enhanced), verbose=0)[0]
+            else:
+                p_cnn = np.zeros(n_cls, dtype=np.float32)
 
-        if mnet_model is not None:
-            p_mnet = mnet_model.predict(prep_mnet_input(enhanced), verbose=0)[0]
-        else:
-            p_mnet = np.zeros(n_cls, dtype=np.float32)
+            if mnet_model is not None:
+                p_mnet = mnet_model.predict(prep_mnet_input(enhanced), verbose=0)[0]
+            else:
+                p_mnet = np.zeros(n_cls, dtype=np.float32)
 
-        # Ensemble input handling
-        base_stack = np.concatenate([p_rf_hog, p_rf_gabor, p_cnn, p_mnet], axis=0).reshape(1, -1)
-        expected = getattr(ensemble_model, "n_features_in_", base_stack.shape[1])
+            # Ensemble
+            base_stack = np.concatenate([p_rf_hog, p_rf_gabor, p_cnn, p_mnet], axis=0).reshape(1, -1)
+            expected = getattr(ensemble_model, "n_features_in_", base_stack.shape[1])
+            if base_stack.shape[1] < expected:
+                pad = np.zeros((1, expected - base_stack.shape[1]), dtype=np.float32)
+                stack = np.concatenate([base_stack, pad], axis=1)
+            else:
+                stack = base_stack[:, :expected]
 
-        if base_stack.shape[1] < expected:
-            pad = np.zeros((1, expected - base_stack.shape[1]), dtype=np.float32)
-            stack = np.concatenate([base_stack, pad], axis=1)
-        else:
-            stack = base_stack[:, :expected]
+            p_ens = ensemble_model.predict_proba(stack)[0]
 
-        p_ens = ensemble_model.predict_proba(stack)[0]
-
-        # Table
-        rows = []
-        for name, prob, enabled in [
-            ("RF-HOG", p_rf_hog, True),
-            ("RF-Gabor", p_rf_gabor, True),
-            ("CNN", p_cnn, cnn_model is not None),
-            ("MobileNetV2", p_mnet, mnet_model is not None),
-            ("Ensemble (Final)", p_ens, True),
-        ]:
-            label, conf = top_prediction(prob, classes)
-            rows.append({
-                "Model": name,
-                "Status": "Loaded" if enabled else "Unavailable",
-                "Predicted Blood Group": label,
-                "Confidence (%)": round(conf, 2),
-            })
-
-        st.subheader("Model Predictions")
-        st.dataframe(pd.DataFrame(rows), use_container_width=True)
-
+        # ── Final Prediction Hero ──
         final_label, final_conf = top_prediction(p_ens, classes)
-        st.success(f"Final Predicted Blood Group: **{final_label}**")
-        st.info(f"Final Confidence: **{final_conf:.2f}%**")
+        st.markdown("### 🎯 Final Prediction")
 
-        st.subheader("Final Ensemble Class Probabilities")
-        prob_df = pd.DataFrame({
-            "Blood Group": classes,
-            "Probability (%)": np.round(p_ens * 100, 2)
-        }).sort_values("Probability (%)", ascending=False)
-        st.dataframe(prob_df, use_container_width=True)
+        res_col1, res_col2, res_col3 = st.columns([1, 2, 1])
+        with res_col2:
+            st.markdown(f"""
+            <div style="text-align:center;padding:1.5rem 0;">
+                <div class="blood-badge">{final_label}</div>
+                <div style="margin-top:12px;font-size:1.1rem;color:#555;">
+                    Confidence: <strong style="color:#E63946;">{final_conf:.1f}%</strong>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
+
+        # ── Individual Model Results ──
+        st.markdown("### 📊 Model-by-Model Predictions")
+
+        model_results = [
+            ("🌲 RF-HOG", p_rf_hog, True, False),
+            ("🌀 RF-Gabor", p_rf_gabor, True, False),
+            ("🧠 CNN", p_cnn, cnn_model is not None, False),
+            ("📱 MobileNetV2", p_mnet, mnet_model is not None, False),
+            ("🎯 Ensemble (Final)", p_ens, True, True),
+        ]
+
+        for name, prob, enabled, is_ensemble in model_results:
+            label, conf = top_prediction(prob, classes)
+            card_class = "model-card ensemble" if is_ensemble else "model-card"
+            status_cls = "loaded" if enabled else "unavailable"
+            status_text = "Loaded" if enabled else "Unavailable"
+
+            st.markdown(f"""
+            <div class="{card_class}">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <div>
+                        <span class="model-name">{name}</span>
+                        <span class="status-pill {status_cls}" style="margin-left:8px;">{status_text}</span>
+                    </div>
+                    <div style="text-align:right;">
+                        <span class="model-prediction">{label}</span>
+                        <span class="model-conf" style="margin-left:8px;">{conf:.1f}%</span>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
+
+        # ── Probability Distribution ──
+        st.markdown("### 📈 Blood Group Probability Distribution")
+
+        # Sort by probability
+        sorted_indices = np.argsort(p_ens)[::-1]
+        colors = ["#E63946", "#C1121F", "#457B9D", "#1D3557", "#6C757D", "#A8DADC", "#90BE6D", "#F9C74F"]
+
+        prob_html = ""
+        for rank, idx in enumerate(sorted_indices):
+            bg = classes[idx]
+            pct = p_ens[idx] * 100
+            bar_color = colors[rank % len(colors)]
+            prob_html += f"""
+            <div class="prob-bar-container">
+                <div class="prob-bar-label">
+                    <span><strong>{bg}</strong></span>
+                    <span>{pct:.1f}%</span>
+                </div>
+                <div class="prob-bar-bg">
+                    <div class="prob-bar-fill" style="width:{max(pct, 2)}%;background:{bar_color};">
+                    </div>
+                </div>
+            </div>
+            """
+
+        st.markdown(prob_html, unsafe_allow_html=True)
+
+        # ── Detailed Data Table ──
+        with st.expander("📋 View Detailed Data Table"):
+            rows = []
+            for name, prob, enabled in [
+                ("RF-HOG", p_rf_hog, True),
+                ("RF-Gabor", p_rf_gabor, True),
+                ("CNN", p_cnn, cnn_model is not None),
+                ("MobileNetV2", p_mnet, mnet_model is not None),
+                ("Ensemble", p_ens, True),
+            ]:
+                label, conf = top_prediction(prob, classes)
+                rows.append({
+                    "Model": name,
+                    "Status": "✅ Loaded" if enabled else "❌ Unavailable",
+                    "Prediction": label,
+                    "Confidence": f"{conf:.1f}%",
+                })
+            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+            st.markdown("**Full Ensemble Probabilities:**")
+            prob_df = pd.DataFrame({
+                "Blood Group": classes,
+                "Probability (%)": np.round(p_ens * 100, 2)
+            }).sort_values("Probability (%)", ascending=False)
+            st.dataframe(prob_df, use_container_width=True, hide_index=True)
 else:
-    st.write("Upload an image to begin.")
+    # ── Empty State ──
+    st.markdown("""
+    <div style="text-align:center;padding:3rem 1rem;">
+        <div style="font-size:4rem;margin-bottom:1rem;">👆</div>
+        <h3 style="color:#1D3557;margin-bottom:0.5rem;">Upload a Fingerprint Image</h3>
+        <p style="color:#888;font-size:1rem;">
+            Drag and drop or click above to upload a fingerprint image.<br>
+            The AI will analyze it and predict the blood group.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+# ── Footer ──
+st.markdown("""
+<div class="footer-text">
+    Built with ❤️ using Streamlit & TensorFlow  •
+    <a href="https://github.com/Kishanjee7/BloodGroupPredictionUsingFingerprint" target="_blank" style="color:#457B9D;">GitHub</a>
+</div>
+""", unsafe_allow_html=True)
