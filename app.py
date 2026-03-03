@@ -1,7 +1,7 @@
 import os
 import cv2
 import json
-import zipfile
+import zipfilesidebar
 import joblib
 import tempfile
 import numpy as np
@@ -423,7 +423,7 @@ html, body, [class*="css"] {
     background: linear-gradient(180deg, #0D1B2A 0%, #1D3557 60%, #264573 100%) !important;
 }
 [data-testid="stSidebar"] * {
-    color: white !important;
+    color: pink !important;
 }
 [data-testid="stSidebar"] hr {
     border-color: #d70f32 !important;
