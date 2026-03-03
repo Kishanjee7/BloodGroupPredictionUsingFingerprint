@@ -1,4 +1,4 @@
-﻿import os
+import os
 import cv2
 import json
 import zipfile
@@ -43,50 +43,33 @@ PATHS = {
 # -----------------------
 import h5py
 
-
 def _extract_keras_history(tensor_obj):
-    """Extract [layer_name, node_index, tensor_index] from a Keras 3 tensor ref."""
     if isinstance(tensor_obj, dict):
         cls = tensor_obj.get("class_name", "")
         if cls in ("__keras_tensor__", "keras_tensor"):
             cfg = tensor_obj.get("config", {})
             history = cfg.get("keras_history", [])
             if len(history) == 3:
-                return history  # [layer_name, node_index, tensor_index]
+                return history
     return tensor_obj
 
-
 def _convert_inbound_nodes_k3_to_k2(nodes):
-    """
-    Convert Keras 3 inbound_nodes format to Keras 2 format.
-
-    Keras 3: [{"args": [tensor_or_list], "kwargs": {...}}, ...]
-    Keras 2: [[[layer_name, node_idx, tensor_idx], ...], ...]
-
-    For single-input layers:  args = [tensor]         -> [[history]]
-    For multi-input layers:   args = [[t1, t2, ...]]  -> [[h1, h2, ...]]
-    """
     if not nodes:
         return nodes
-
-    # Check if nodes are already in Keras 2 format (list of lists)
     if isinstance(nodes, list) and len(nodes) > 0:
         first = nodes[0]
         if isinstance(first, list):
-            return nodes  # Already Keras 2 format
+            return nodes
         if isinstance(first, dict) and "args" in first:
-            # Keras 3 format -> convert
             converted = []
             for node in nodes:
                 args = node.get("args", [])
                 call_inputs = []
                 for arg in args:
                     if isinstance(arg, dict) and arg.get("class_name") in ("__keras_tensor__", "keras_tensor"):
-                        # Single tensor input
                         h = _extract_keras_history(arg)
                         call_inputs.append(h)
                     elif isinstance(arg, list):
-                        # List of tensors (e.g., Add, Concatenate)
                         for item in arg:
                             h = _extract_keras_history(item)
                             call_inputs.append(h)
@@ -96,38 +79,25 @@ def _convert_inbound_nodes_k3_to_k2(nodes):
             return converted
     return nodes
 
-
 def _fix_keras3_config(obj):
-    """Recursively convert a Keras 3 serialized config to Keras 2 format."""
     if isinstance(obj, dict):
         out = {}
         for k, v in obj.items():
-            # 1) Skip keys that only exist in Keras 3
             if k in ("build_config", "shared_object_id", "registered_name"):
                 continue
-
-            # 2) Rename batch_shape -> batch_input_shape (InputLayer)
             nk = "batch_input_shape" if k == "batch_shape" else k
-
-            # 3) Rewrite keras.src.* module paths -> keras.*
             if nk == "module" and isinstance(v, str):
                 if v.startswith("keras.src."):
                     v = "keras." + v[len("keras.src."):]
-
-            # 4) Flatten DTypePolicy dicts to plain strings
             if nk == "dtype" and isinstance(v, dict):
                 cls = v.get("class_name", "")
                 if cls == "DTypePolicy":
                     v = v.get("config", {}).get("name", "float32")
                 else:
                     v = _fix_keras3_config(v)
-
-            # 5) Convert inbound_nodes format
             if nk == "inbound_nodes":
                 out[nk] = _convert_inbound_nodes_k3_to_k2(v)
                 continue
-
-            # 6) Recurse into the value
             if nk != "dtype" or isinstance(v, dict):
                 out[nk] = _fix_keras3_config(v)
             else:
@@ -137,9 +107,7 @@ def _fix_keras3_config(obj):
         return [_fix_keras3_config(x) for x in obj]
     return obj
 
-
 def _strip_module_keys(obj):
-    """Remove 'module' keys from layer dicts (Keras 2 doesn't use them)."""
     if isinstance(obj, dict):
         out = {}
         for k, v in obj.items():
@@ -151,9 +119,7 @@ def _strip_module_keys(obj):
         return [_strip_module_keys(x) for x in obj]
     return obj
 
-
 def patch_keras_file(src_path: str) -> str:
-    """Patch a .keras (zip) file by transforming its config.json."""
     tmp_dir = tempfile.mkdtemp(prefix="keras_patch_")
     patched = os.path.join(tmp_dir, os.path.basename(src_path))
     with zipfile.ZipFile(src_path, "r") as zin:
@@ -168,9 +134,7 @@ def patch_keras_file(src_path: str) -> str:
                 zout.writestr(name, data)
     return patched
 
-
 def patch_h5_file(src_path: str) -> str:
-    """Patch an .h5 file by transforming its embedded model JSON config."""
     import shutil
     tmp_dir = tempfile.mkdtemp(prefix="h5_patch_")
     patched = os.path.join(tmp_dir, os.path.basename(src_path))
@@ -189,9 +153,7 @@ def patch_h5_file(src_path: str) -> str:
         pass
     return patched
 
-
 def _try_load_model(path: str, loader_name: str, errs: list):
-    """Attempt to load a model, appending errors to errs on failure."""
     if not os.path.exists(path):
         errs.append(f"{loader_name}: file not found ({path})")
         return None
@@ -204,48 +166,35 @@ def _try_load_model(path: str, loader_name: str, errs: list):
         errs.append(f"{loader_name} failed: {e}")
     return None
 
-
 def load_deep_model(primary_h5: str, fallback_keras: str, model_name: str):
     errs = []
-
-    # 1) Try .h5 directly
     if os.path.exists(primary_h5):
         m = _try_load_model(primary_h5, "tf.keras", errs)
-        if m is not None:
-            return m, None
+        if m is not None: return m, None
         m = _try_load_model(primary_h5, "keras", errs)
-        if m is not None:
-            return m, None
-        # 1b) Try patched .h5
+        if m is not None: return m, None
         try:
             patched_h5 = patch_h5_file(primary_h5)
             m = _try_load_model(patched_h5, "tf.keras (patched h5)", errs)
-            if m is not None:
-                return m, None
+            if m is not None: return m, None
             m = _try_load_model(patched_h5, "keras (patched h5)", errs)
-            if m is not None:
-                return m, None
+            if m is not None: return m, None
         except Exception as e:
             errs.append(f"patch_h5_file failed: {e}")
     else:
         errs.append(f".h5 not found ({primary_h5})")
 
-    # 2) Try .keras directly, then patched
     if os.path.exists(fallback_keras):
         m = _try_load_model(fallback_keras, "tf.keras", errs)
-        if m is not None:
-            return m, None
+        if m is not None: return m, None
         m = _try_load_model(fallback_keras, "keras", errs)
-        if m is not None:
-            return m, None
+        if m is not None: return m, None
         try:
             patched = patch_keras_file(fallback_keras)
             m = _try_load_model(patched, "tf.keras (patched keras)", errs)
-            if m is not None:
-                return m, None
+            if m is not None: return m, None
             m = _try_load_model(patched, "keras (patched keras)", errs)
-            if m is not None:
-                return m, None
+            if m is not None: return m, None
         except Exception as e:
             errs.append(f"patch_keras_file failed: {e}")
     else:
@@ -266,10 +215,8 @@ def enhance_fingerprint(img_gray_01: np.ndarray) -> np.ndarray:
     return img_sharp.astype(np.float32) / 255.0
 
 def get_hog_feature(img_gray_01: np.ndarray) -> np.ndarray:
-    f = hog(
-        img_gray_01, orientations=9, pixels_per_cell=(16, 16),
-        cells_per_block=(2, 2), block_norm="L2-Hys"
-    )
+    f = hog(img_gray_01, orientations=9, pixels_per_cell=(16, 16),
+            cells_per_block=(2, 2), block_norm="L2-Hys")
     return f.reshape(1, -1).astype(np.float32)
 
 def get_gabor_feature(img_gray_01: np.ndarray, freqs=(0.1, 0.3, 0.5)) -> np.ndarray:
@@ -280,12 +227,12 @@ def get_gabor_feature(img_gray_01: np.ndarray, freqs=(0.1, 0.3, 0.5)) -> np.ndar
     return np.array(vals, dtype=np.float32).reshape(1, -1)
 
 def prep_cnn_input(img_gray_01: np.ndarray) -> np.ndarray:
-    return np.expand_dims(img_gray_01, axis=(0, -1)).astype(np.float32)  # (1,H,W,1)
+    return np.expand_dims(img_gray_01, axis=(0, -1)).astype(np.float32)
 
 def prep_mnet_input(img_gray_01: np.ndarray) -> np.ndarray:
-    x = np.repeat(np.expand_dims(img_gray_01, axis=-1), 3, axis=-1)      # (H,W,3)
+    x = np.repeat(np.expand_dims(img_gray_01, axis=-1), 3, axis=-1)
     x = preprocess_input(x * 255.0)
-    return np.expand_dims(x, axis=0).astype(np.float32)                   # (1,H,W,3)
+    return np.expand_dims(x, axis=0).astype(np.float32)
 
 def top_prediction(prob: np.ndarray, classes: np.ndarray):
     idx = int(np.argmax(prob))
@@ -324,8 +271,8 @@ st.set_page_config(
 # ── Custom CSS ──
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&display=swap');
 
 /* ═══ Keyframe Animations ═══ */
 @keyframes gradientShift {
@@ -333,412 +280,240 @@ st.markdown("""
     50% { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
 }
-@keyframes float {
-    0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.6; }
-    50% { transform: translateY(-20px) rotate(5deg); opacity: 1; }
-}
-@keyframes pulse {
-    0%, 100% { box-shadow: 0 0 20px rgba(230,57,70,0.3); }
-    50% { box-shadow: 0 0 40px rgba(230,57,70,0.6), 0 0 60px rgba(230,57,70,0.2); }
-}
-@keyframes shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-}
 @keyframes slideUp {
-    from { opacity: 0; transform: translateY(20px); }
+    from { opacity: 0; transform: translateY(15px); }
     to { opacity: 1; transform: translateY(0); }
-}
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
 }
 @keyframes barGrow {
     from { width: 0%; }
 }
-@keyframes ripple {
-    0% { transform: scale(1); opacity: 0.4; }
-    100% { transform: scale(1.5); opacity: 0; }
-}
 
-/* ═══ Root Variables ═══ */
+/* ═══ Root Variables (High Contrast) ═══ */
 :root {
     --primary: #E63946;
-    --primary-dark: #C1121F;
-    --primary-glow: rgba(230,57,70,0.3);
-    --accent: #457B9D;
-    --accent-light: #A8DADC;
-    --accent-vivid: #2EC4B6;
-    --dark: #1D3557;
-    --dark-rich: #0D1B2A;
-    --light: #F1FAEE;
-    --warm: #F4A261;
-    --warm-dark: #E76F51;
-    --purple: #6C63FF;
-    --bg-card: rgba(255,255,255,0.92);
-    --bg-glass: rgba(255,255,255,0.15);
+    --primary-dark: #B92B37;
+    --text-main: #1E293B;      /* Highly visible dark blue/grey */
+    --text-muted: #475569;
+    --bg-main: #F4F7F9;
+    --bg-card: rgba(255, 255, 255, 0.95);
+    --card-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
 }
 
 html, body, [class*="css"] {
     font-family: 'Inter', sans-serif;
+    color: var(--text-main);
 }
 
-/* ═══ Animated Background ═══ */
+/* Override default Streamlit text colors for perfect visibility */
+p, li, span, div {
+    color: var(--text-main);
+}
+
+/* ═══ Clean Background ═══ */
 [data-testid="stAppViewContainer"] {
-    background: linear-gradient(-45deg, #F1FAEE, #E8F4F8, #FFF0E8, #F0E6FF, #E8F8F0);
-    background-size: 400% 400%;
-    animation: gradientShift 15s ease infinite;
-}
-
-/* Floating particles via pseudo-elements on main block */
-[data-testid="stAppViewContainer"]::before {
-    content: '';
-    position: fixed;
-    top: 10%;
-    left: 5%;
-    width: 300px;
-    height: 300px;
-    background: radial-gradient(circle, rgba(230,57,70,0.08) 0%, transparent 70%);
-    border-radius: 50%;
-    animation: float 8s ease-in-out infinite;
-    pointer-events: none;
-    z-index: 0;
-}
-[data-testid="stAppViewContainer"]::after {
-    content: '';
-    position: fixed;
-    bottom: 15%;
-    right: 10%;
-    width: 250px;
-    height: 250px;
-    background: radial-gradient(circle, rgba(69,123,157,0.08) 0%, transparent 70%);
-    border-radius: 50%;
-    animation: float 10s ease-in-out infinite reverse;
-    pointer-events: none;
-    z-index: 0;
+    background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
 }
 
 /* ═══ Sidebar Styling ═══ */
 [data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #0D1B2A 0%, #1D3557 60%, #264573 100%) !important;
+    background: #0F172A !important;
+    border-right: 1px solid rgba(255,255,255,0.05);
 }
 [data-testid="stSidebar"] * {
-    color: #E0E8F0 !important;
+    color: #F8FAFC !important;
 }
 [data-testid="stSidebar"] hr {
-    border-color: rgba(168,218,220,0.2) !important;
+    border-color: rgba(255,255,255,0.1) !important;
 }
-[data-testid="stSidebar"] strong {
-    color: #A8DADC !important;
-}
-[data-testid="stSidebar"] h2{
-    color: red !important;
-}
-[data-testid="stSidebar"] h3{
-    color: white !important;
+[data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
+    color: #FF6B6B !important;
+    font-family: 'Poppins', sans-serif;
 }
 
-/* ═══ Hero Banner ═══ */
+/* ═══ Hero Banner (Deep Contrast) ═══ */
 .hero-banner {
-    background: linear-gradient(-45deg, #0D1B2A, #1D3557, #457B9D, #E63946, #F4A261);
-    background-size: 300% 300%;
-    animation: gradientShift 8s ease infinite;
-    border-radius: 20px;
+    background: linear-gradient(-45deg, #1D2671, #C33764);
+    background-size: 200% 200%;
+    animation: gradientShift 10s ease infinite;
+    border-radius: 16px;
     padding: 3rem 2rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 2rem;
     text-align: center;
-    box-shadow: 0 12px 40px rgba(29,53,87,0.3);
-    position: relative;
-    overflow: hidden;
-}
-.hero-banner::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px);
-    background-size: 30px 30px;
-    animation: float 20s linear infinite;
-    pointer-events: none;
+    box-shadow: 0 15px 35px rgba(195, 55, 100, 0.2);
 }
 .hero-banner h1 {
     font-family: 'Poppins', sans-serif;
-    color: white;
-    font-size: 2.4rem;
+    color: #FFFFFF !important;
+    font-size: 2.8rem;
     font-weight: 800;
     margin: 0;
-    letter-spacing: -0.5px;
-    text-shadow: 0 2px 10px rgba(0,0,0,0.2);
-    position: relative;
-    z-index: 1;
+    text-shadow: 0 4px 15px rgba(0,0,0,0.3);
 }
 .hero-banner p {
-    color: rgba(168,218,220,0.9);
-    font-size: 1.1rem;
-    margin: 0.6rem 0 0 0;
-    font-weight: 400;
-    position: relative;
-    z-index: 1;
+    color: #F8FAFC !important;
+    font-size: 1.2rem;
+    margin-top: 0.8rem;
+    font-weight: 500;
+    opacity: 0.9;
 }
 
 /* ═══ Stat Cards ═══ */
 .stat-card {
     background: var(--bg-card);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(168,218,220,0.25);
-    border-radius: 16px;
-    padding: 1.3rem 1rem;
+    border: 1px solid rgba(0,0,0,0.05);
+    border-radius: 12px;
+    padding: 1.5rem 1rem;
     text-align: center;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: var(--card-shadow);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
     animation: slideUp 0.6s ease forwards;
-    position: relative;
-    overflow: hidden;
-}
-.stat-card::after {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--accent), var(--primary), var(--warm));
-    background-size: 200% 100%;
-    animation: shimmer 3s ease infinite;
 }
 .stat-card:hover {
-    transform: translateY(-4px) scale(1.02);
-    box-shadow: 0 8px 30px rgba(69,123,157,0.15);
-    border-color: var(--accent-light);
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(15, 23, 42, 0.12);
+}
+.stat-card-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-main) !important;
+    margin: 8px 0;
 }
 
 /* ═══ Blood Group Result Badge ═══ */
 .blood-badge {
     display: inline-block;
-    background: linear-gradient(135deg, #E63946, #C1121F, #E63946);
-    background-size: 200% 200%;
-    animation: gradientShift 3s ease infinite, pulse 2s ease-in-out infinite;
-    color: white;
+    background: linear-gradient(135deg, #E63946, #900C3F);
+    color: #FFFFFF !important;
     font-family: 'Poppins', sans-serif;
-    font-size: 3.5rem;
-    font-weight: 900;
-    padding: 0.7rem 2.5rem;
-    border-radius: 20px;
-    letter-spacing: 2px;
-    margin: 0.5rem 0;
-    text-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    position: relative;
-}
-.blood-badge::before {
-    content: '';
-    position: absolute;
-    inset: -3px;
-    border-radius: 23px;
-    background: linear-gradient(135deg, #E63946, #F4A261, #E63946);
-    z-index: -1;
-    animation: gradientShift 4s ease infinite;
-    background-size: 200% 200%;
+    font-size: 4rem;
+    font-weight: 800;
+    padding: 1rem 3rem;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(230,57,70,0.4);
 }
 
 /* ═══ Model Result Cards ═══ */
 .model-card {
     background: var(--bg-card);
-    border-radius: 14px;
-    padding: 1rem 1.4rem;
-    border-left: 4px solid var(--accent);
-    box-shadow: 0 3px 15px rgba(0,0,0,0.05);
-    margin-bottom: 0.7rem;
-    transition: all 0.3s ease;
+    border-radius: 12px;
+    padding: 1.2rem 1.5rem;
+    border-left: 5px solid #3B82F6;
+    box-shadow: var(--card-shadow);
+    margin-bottom: 1rem;
     animation: slideUp 0.5s ease forwards;
-}
-.model-card:hover {
-    transform: translateX(6px);
-    box-shadow: 0 5px 20px rgba(69,123,157,0.12);
-    border-left-width: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 .model-card.ensemble {
     border-left-color: var(--primary);
-    background: linear-gradient(135deg, rgba(230,57,70,0.04), rgba(244,162,97,0.04), rgba(255,255,255,0.95));
-    border-left-width: 5px;
-}
-.model-card.ensemble:hover {
-    box-shadow: 0 5px 25px rgba(230,57,70,0.12);
+    background: #FFF5F5;
+    border: 1px solid rgba(230,57,70,0.1);
+    border-left-width: 6px;
 }
 .model-card .model-name {
-    font-weight: 600;
-    color: var(--dark);
-    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-main) !important;
+    font-size: 1.05rem;
 }
 .model-card .model-prediction {
     font-family: 'Poppins', sans-serif;
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: var(--primary);
-}
-.model-card .model-conf {
-    font-size: 0.85rem;
-    color: #888;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--primary) !important;
 }
 
 /* ═══ Status Pill ═══ */
 .status-pill {
     display: inline-block;
-    font-size: 0.68rem;
+    font-size: 0.75rem;
     font-weight: 700;
-    padding: 3px 12px;
+    padding: 4px 12px;
     border-radius: 20px;
     text-transform: uppercase;
-    letter-spacing: 0.8px;
 }
 .status-pill.loaded {
-    background: linear-gradient(135deg, #D4EDDA, #C3E6CB);
-    color: #155724;
-    box-shadow: 0 2px 6px rgba(40,167,69,0.15);
+    background: #DCFCE7;
+    color: #166534 !important;
 }
 .status-pill.unavailable {
-    background: linear-gradient(135deg, #F8D7DA, #F1AEB5);
-    color: #721C24;
+    background: #FEE2E2;
+    color: #991B1B !important;
 }
 
 /* ═══ Probability Bars ═══ */
 .prob-bar-container {
-    margin: 6px 0;
+    margin: 12px 0;
     animation: slideUp 0.5s ease forwards;
 }
 .prob-bar-bg {
-    background: linear-gradient(90deg, #E9ECEF, #F8F9FA);
-    border-radius: 10px;
-    height: 28px;
+    background: #E2E8F0;
+    border-radius: 8px;
+    height: 18px;
     overflow: hidden;
     position: relative;
-    box-shadow: inset 0 1px 3px rgba(0,0,0,0.08);
 }
 .prob-bar-fill {
     height: 100%;
-    border-radius: 10px;
-    animation: barGrow 1s ease forwards;
-    display: flex;
-    align-items: center;
-    padding-left: 10px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: white;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-    position: relative;
-    overflow: hidden;
-}
-.prob-bar-fill::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255,255,255,0.2),
-        transparent
-    );
-    animation: shimmer 2s ease infinite;
-    background-size: 200% 100%;
+    border-radius: 8px;
+    animation: barGrow 1s cubic-bezier(0.1, 0.8, 0.2, 1) forwards;
 }
 .prob-bar-label {
     display: flex;
     justify-content: space-between;
-    font-size: 0.82rem;
-    color: #444;
-    margin-bottom: 3px;
-    font-weight: 500;
+    font-size: 0.95rem;
+    color: var(--text-main) !important;
+    font-weight: 600;
+    margin-bottom: 6px;
 }
 
 /* ═══ Upload Area ═══ */
 [data-testid="stFileUploader"] {
-    border: 2px dashed var(--accent) !important;
-    border-radius: 20px !important;
-    padding: 1.2rem !important;
-    background: rgba(69,123,157,0.03) !important;
-    transition: all 0.3s ease !important;
+    border: 2px dashed #94A3B8 !important;
+    border-radius: 16px !important;
+    padding: 2rem !important;
+    background: #FFFFFF !important;
 }
 [data-testid="stFileUploader"]:hover {
     border-color: var(--primary) !important;
-    background: rgba(230,57,70,0.03) !important;
-    box-shadow: 0 4px 20px rgba(230,57,70,0.08) !important;
-}
-
-/* ═══ Section Divider ═══ */
-.section-divider {
-    border: none;
-    height: 2px;
-    background: linear-gradient(to right, transparent, var(--accent-light), var(--primary), var(--accent-light), transparent);
-    margin: 1.8rem 0;
-    opacity: 0.6;
-}
-
-/* ═══ Image Preview ═══ */
-[data-testid="stImage"] {
-    border-radius: 14px;
-    overflow: hidden;
-    box-shadow: 0 6px 25px rgba(0,0,0,0.1);
-    transition: transform 0.3s ease;
-}
-[data-testid="stImage"]:hover {
-    transform: scale(1.02);
+    background: #F8FAFC !important;
 }
 
 /* ═══ Buttons ═══ */
 [data-testid="stBaseButton-primary"] {
-    background: linear-gradient(135deg, #E63946, #C1121F) !important;
+    background: linear-gradient(135deg, #E63946, #B92B37) !important;
+    color: #FFFFFF !important;
     border: none !important;
-    border-radius: 14px !important;
-    padding: 0.7rem 2rem !important;
-    font-weight: 700 !important;
-    font-size: 1.05rem !important;
-    letter-spacing: 0.5px !important;
-    box-shadow: 0 4px 15px rgba(230,57,70,0.3) !important;
-    transition: all 0.3s ease !important;
+    border-radius: 10px !important;
+    padding: 1.5rem !important;
+    font-weight: 800 !important;
+    font-size: 1.2rem !important;
+    box-shadow: 0 8px 20px rgba(230,57,70,0.25) !important;
+    transition: transform 0.2s, box-shadow 0.2s !important;
 }
 [data-testid="stBaseButton-primary"]:hover {
     transform: translateY(-2px) !important;
-    box-shadow: 0 6px 25px rgba(230,57,70,0.4) !important;
+    box-shadow: 0 12px 25px rgba(230,57,70,0.35) !important;
 }
 
-/* ═══ Empty State ═══ */
-.empty-state {
-    text-align: center;
-    padding: 3.5rem 1rem;
-    animation: fadeIn 1s ease;
-}
-.empty-state .empty-icon {
-    font-size: 4.5rem;
-    margin-bottom: 1rem;
-    animation: float 3s ease-in-out infinite;
+/* ═══ Headers ═══ */
+h1, h2, h3 {
+    color: #0F172A !important;
+    font-family: 'Poppins', sans-serif !important;
 }
 
 /* ═══ Footer ═══ */
 .footer-text {
     text-align: center;
-    color: #aaa;
-    font-size: 0.8rem;
-    margin-top: 2.5rem;
-    padding: 1.2rem 0;
-    border-top: 1px solid rgba(168,218,220,0.2);
+    color: var(--text-muted) !important;
+    font-size: 0.9rem;
+    margin-top: 3rem;
+    font-weight: 500;
 }
 .footer-text a {
-    color: var(--accent) !important;
+    color: #2563EB !important;
     text-decoration: none;
-    font-weight: 600;
-    transition: color 0.2s;
-}
-.footer-text a:hover {
-    color: var(--primary) !important;
-}
-
-/* ═══ Section Headers ═══ */
-[data-testid="stMarkdown"] h3 {
-    color: var(--dark) !important;
-    font-family: 'Poppins', sans-serif !important;
-    font-weight: 700 !important;
+    font-weight: 700;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -791,8 +566,8 @@ except Exception as e:
 # ── Hero Banner ──
 st.markdown("""
 <div class="hero-banner">
-    <h1>🩸 Blood Group Prediction Using Fingerprint</h1>
-    <p>AI-powered multi-model system that analyzes fingerprint ridge patterns to predict your blood group</p>
+    <h1>Blood Group Prediction Using Fingerprint</h1>
+    <p>Multi-model system that analyzes fingerprint ridge patterns to predict your blood group</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -810,13 +585,13 @@ for col, (name, loaded, icon) in zip(status_cols, model_statuses):
     status_text = "Ready" if loaded else "N/A"
     col.markdown(f"""
     <div class="stat-card">
-        <div style="font-size:1.5rem;">{icon}</div>
-        <div style="font-size:0.85rem;font-weight:600;color:#1D3557;margin:4px 0;">{name}</div>
+        <div style="font-size:2rem; margin-bottom:8px;">{icon}</div>
+        <div class="stat-card-title">{name}</div>
         <span class="status-pill {status_cls}">{status_text}</span>
     </div>
     """, unsafe_allow_html=True)
 
-st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
+st.write("") # Spacer
 
 # ── Upload ──
 uploaded = st.file_uploader(
@@ -838,9 +613,8 @@ if uploaded is not None:
     with c2:
         st.image(enhanced, caption="✨ Enhanced Fingerprint", use_container_width=True, clamp=True)
 
-    st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
+    st.write("") 
 
-    # Centered predict button
     col_l, col_btn, col_r = st.columns([1, 2, 1])
     with col_btn:
         predict_clicked = st.button("🔬 Analyze Fingerprint", use_container_width=True, type="primary")
@@ -850,11 +624,9 @@ if uploaded is not None:
         n_cls = len(classes)
 
         with st.spinner("🧬 Running analysis across all models..."):
-            # Classical model probs
             p_rf_hog = rf_hog.predict_proba(get_hog_feature(enhanced))[0]
             p_rf_gabor = rf_gabor.predict_proba(get_gabor_feature(enhanced))[0]
 
-            # Deep model probs
             if cnn_model is not None:
                 p_cnn = cnn_model.predict(prep_cnn_input(enhanced), verbose=0)[0]
             else:
@@ -865,7 +637,6 @@ if uploaded is not None:
             else:
                 p_mnet = np.zeros(n_cls, dtype=np.float32)
 
-            # Ensemble
             base_stack = np.concatenate([p_rf_hog, p_rf_gabor, p_cnn, p_mnet], axis=0).reshape(1, -1)
             expected = getattr(ensemble_model, "n_features_in_", base_stack.shape[1])
             if base_stack.shape[1] < expected:
@@ -878,83 +649,83 @@ if uploaded is not None:
 
         # ── Final Prediction Hero ──
         final_label, final_conf = top_prediction(p_ens, classes)
-        st.markdown("### 🎯 Final Prediction")
+        
+        st.write("---")
+        st.markdown("<h2 style='text-align: center;'>🎯 Final Prediction</h2>", unsafe_allow_html=True)
 
         res_col1, res_col2, res_col3 = st.columns([1, 2, 1])
         with res_col2:
             st.markdown(f"""
-            <div style="text-align:center;padding:1.5rem 0;">
+            <div style="text-align:center; padding:1.5rem 0;">
                 <div class="blood-badge">{final_label}</div>
-                <div style="margin-top:12px;font-size:1.1rem;color:#555;">
+                <div style="margin-top:16px; font-size:1.3rem; color:var(--text-main); font-weight: 600;">
                     Confidence: <strong style="color:#E63946;">{final_conf:.1f}%</strong>
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
-        st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
+        st.write("---")
 
+        col_models, col_probs = st.columns([1.2, 1])
+        
         # ── Individual Model Results ──
-        st.markdown("### 📊 Model-by-Model Predictions")
+        with col_models:
+            st.markdown("### 📊 Model Predictions")
+            model_results = [
+                ("🌲 RF-HOG", p_rf_hog, True, False),
+                ("🌀 RF-Gabor", p_rf_gabor, True, False),
+                ("🧠 CNN", p_cnn, cnn_model is not None, False),
+                ("📱 MobileNetV2", p_mnet, mnet_model is not None, False),
+                ("🎯 Ensemble (Final)", p_ens, True, True),
+            ]
 
-        model_results = [
-            ("🌲 RF-HOG", p_rf_hog, True, False),
-            ("🌀 RF-Gabor", p_rf_gabor, True, False),
-            ("🧠 CNN", p_cnn, cnn_model is not None, False),
-            ("📱 MobileNetV2", p_mnet, mnet_model is not None, False),
-            ("🎯 Ensemble (Final)", p_ens, True, True),
-        ]
+            for name, prob, enabled, is_ensemble in model_results:
+                label, conf = top_prediction(prob, classes)
+                card_class = "model-card ensemble" if is_ensemble else "model-card"
+                status_cls = "loaded" if enabled else "unavailable"
+                status_text = "Loaded" if enabled else "Unavailable"
 
-        for name, prob, enabled, is_ensemble in model_results:
-            label, conf = top_prediction(prob, classes)
-            card_class = "model-card ensemble" if is_ensemble else "model-card"
-            status_cls = "loaded" if enabled else "unavailable"
-            status_text = "Loaded" if enabled else "Unavailable"
-
-            st.markdown(f"""
-            <div class="{card_class}">
-                <div style="display:flex;justify-content:space-between;align-items:center;">
+                st.markdown(f"""
+                <div class="{card_class}">
                     <div>
                         <span class="model-name">{name}</span>
-                        <span class="status-pill {status_cls}" style="margin-left:8px;">{status_text}</span>
+                        <span class="status-pill {status_cls}" style="margin-left:10px;">{status_text}</span>
                     </div>
                     <div style="text-align:right;">
                         <span class="model-prediction">{label}</span>
-                        <span class="model-conf" style="margin-left:8px;">{conf:.1f}%</span>
+                        <div style="font-size:0.85rem; color:var(--text-muted); font-weight: 600;">{conf:.1f}%</div>
                     </div>
                 </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
 
         # ── Probability Distribution ──
-        st.markdown("### 📈 Blood Group Probability Distribution")
+        with col_probs:
+            st.markdown("### 📈 Probability Breakdown")
 
-        # Sort by probability
-        sorted_indices = np.argsort(p_ens)[::-1]
-        colors = ["#E63946", "#C1121F", "#457B9D", "#1D3557", "#6C757D", "#A8DADC", "#90BE6D", "#F9C74F"]
+            sorted_indices = np.argsort(p_ens)[::-1]
+            colors = ["#E63946", "#F59E0B", "#3B82F6", "#10B981", "#8B5CF6", "#EC4899", "#14B8A6", "#64748B"]
 
-        prob_html = ""
-        for rank, idx in enumerate(sorted_indices):
-            bg = classes[idx]
-            pct = p_ens[idx] * 100
-            bar_color = colors[rank % len(colors)]
-            prob_html += f"""
-            <div class="prob-bar-container">
-                <div class="prob-bar-label">
-                    <span><strong>{bg}</strong></span>
-                    <span>{pct:.1f}%</span>
-                </div>
-                <div class="prob-bar-bg">
-                    <div class="prob-bar-fill" style="width:{max(pct, 2)}%;background:{bar_color};">
+            prob_html = ""
+            for rank, idx in enumerate(sorted_indices):
+                bg = classes[idx]
+                pct = p_ens[idx] * 100
+                bar_color = colors[rank % len(colors)]
+                prob_html += f"""
+                <div class="prob-bar-container">
+                    <div class="prob-bar-label">
+                        <span>{bg}</span>
+                        <span>{pct:.1f}%</span>
+                    </div>
+                    <div class="prob-bar-bg">
+                        <div class="prob-bar-fill" style="width:{max(pct, 1)}%; background:{bar_color};"></div>
                     </div>
                 </div>
-            </div>
-            """
+                """
 
-        st.markdown(prob_html, unsafe_allow_html=True)
+            st.markdown(prob_html, unsafe_allow_html=True)
 
         # ── Detailed Data Table ──
+        st.write("")
         with st.expander("📋 View Detailed Data Table"):
             rows = []
             for name, prob, enabled in [
@@ -973,21 +744,15 @@ if uploaded is not None:
                 })
             st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
-            st.markdown("**Full Ensemble Probabilities:**")
-            prob_df = pd.DataFrame({
-                "Blood Group": classes,
-                "Probability (%)": np.round(p_ens * 100, 2)
-            }).sort_values("Probability (%)", ascending=False)
-            st.dataframe(prob_df, use_container_width=True, hide_index=True)
 else:
     # ── Empty State ──
     st.markdown("""
-    <div style="text-align:center;padding:3rem 1rem;">
-        <div style="font-size:4rem;margin-bottom:1rem;">👆</div>
-        <h3 style="color:#1D3557;margin-bottom:0.5rem;">Upload a Fingerprint Image</h3>
-        <p style="color:#888;font-size:1rem;">
+    <div style="text-align:center; padding:4rem 1rem;">
+        <div style="font-size:4.5rem; margin-bottom:1rem;">👆</div>
+        <h3 style="color:#0F172A; margin-bottom:0.5rem;">Upload a Fingerprint Image</h3>
+        <p style="color:#475569; font-size:1.1rem; font-weight: 500;">
             Drag and drop or click above to upload a fingerprint image.<br>
-            The AI will analyze it and predict the blood group.
+            The AI will analyze the ridge patterns and predict the blood group.
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -995,8 +760,7 @@ else:
 # ── Footer ──
 st.markdown("""
 <div class="footer-text">
-    Built with ❤️ using Streamlit & TensorFlow  •
-    <a href="https://github.com/Kishanjee7/BloodGroupPredictionUsingFingerprint" target="_blank" style="color:#457B9D;">GitHub</a>
+    Built with ❤️ using Streamlit & TensorFlow • 
+    <a href="https://github.com/Kishanjee7/BloodGroupPredictionUsingFingerprint" target="_blank">GitHub Repository</a>
 </div>
 """, unsafe_allow_html=True)
-
