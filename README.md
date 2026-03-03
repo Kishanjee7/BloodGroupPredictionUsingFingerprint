@@ -17,18 +17,9 @@ This project explores the correlation between fingerprint patterns and blood gro
 ## 🏗️ Architecture
 
 ```
-Fingerprint Image
-       │
-       ├── HOG Features ──────────► Random Forest (RF-HOG)
-       │                                    │
-       ├── Gabor Features ────────► Random Forest (RF-Gabor)
-       │                                    │
-       ├── Grayscale 128×128 ─────► Custom CNN          ├──► Stacking Ensemble
-       │                                    │           │    (Logistic Regression)
-       └── RGB 128×128 ──────────► MobileNetV2          │         │
-                                            │           │         ▼
-                                            └───────────┘   Final Prediction
-```
+F
+```![tuvyu (1)](https://github.com/user-attachments/assets/6f42bf9f-3675-442d-9564-512fb73f47fd)
+
 
 ## 🚀 Models Used
 
