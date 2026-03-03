@@ -431,7 +431,10 @@ html, body, [class*="css"] {
 [data-testid="stSidebar"] strong {
     color: #A8DADC !important;
 }
-[data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
+[data-testid="stSidebar"] h2{
+    color: red !important;
+}
+[data-testid="stSidebar"] h3{
     color: white !important;
 }
 
@@ -996,3 +999,4 @@ st.markdown("""
     <a href="https://github.com/Kishanjee7/BloodGroupPredictionUsingFingerprint" target="_blank" style="color:#457B9D;">GitHub</a>
 </div>
 """, unsafe_allow_html=True)
+
