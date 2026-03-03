@@ -1,7 +1,7 @@
 import os
 import cv2
 import json
-import zipfilesidebar
+import zipfile
 import joblib
 import tempfile
 import numpy as np
@@ -423,16 +423,16 @@ html, body, [class*="css"] {
     background: linear-gradient(180deg, #0D1B2A 0%, #1D3557 60%, #264573 100%) !important;
 }
 [data-testid="stSidebar"] * {
-    color: green !important;
+    color: #E0E8F0 !important;
 }
 [data-testid="stSidebar"] hr {
-    border-color: #d70f32 !important;
+    border-color: rgba(168,218,220,0.2) !important;
 }
 [data-testid="stSidebar"] strong {
-    color: green !important;
+    color: #A8DADC !important;
 }
 [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
-    color: #d70f32 !important;
+    color: white !important;
 }
 
 /* ═══ Hero Banner ═══ */
@@ -788,8 +788,8 @@ except Exception as e:
 # ── Hero Banner ──
 st.markdown("""
 <div class="hero-banner">
-    <h1>Blood Group Prediction Using Fingerprint</h1>
-    <p>Multi-model system that analyzes fingerprint ridge patterns to predict your blood group</p>
+    <h1>🩸 Blood Group Prediction Using Fingerprint</h1>
+    <p>AI-powered multi-model system that analyzes fingerprint ridge patterns to predict your blood group</p>
 </div>
 """, unsafe_allow_html=True)
 
