@@ -323,7 +323,7 @@ p, li, span, div, label {
 
 /* ═══ Sidebar Styling ═══ */
 [data-testid="stSidebar"] {
-    background: #0A0E17 !important;
+    background: linear-gradient(180deg, #0B132B 0%, #1C2541 100%) !important;
     border-right: 1px solid rgba(255,255,255,0.05);
 }
 [data-testid="stSidebar"] hr {
@@ -649,12 +649,12 @@ if uploaded is not None:
 
     st.markdown("<h3 style='text-align: center; margin-top: 20px;'>🔍 Image Preview</h3>", unsafe_allow_html=True)
     
-    # Reduced image size by using [1, 2, 2, 1] layout so the images occupy only the middle 50%
-    col_spacer1, c1, c2, col_spacer2 = st.columns([1, 2, 2, 1])
+    # Increased image size by adjusting column ratios and re-enabling use_container_width
+    col_spacer1, c1, c2, col_spacer2 = st.columns([1, 3, 3, 1])
     with c1:
-        st.image(orig, caption="📷 Original Fingerprint") # Removed use_container_width to keep it compact
+        st.image(orig, caption="📷 Original Fingerprint", use_container_width=True) 
     with c2:
-        st.image(enhanced, caption="✨ Enhanced Fingerprint")
+        st.image(enhanced, caption="✨ Enhanced Fingerprint", use_container_width=True)
 
     st.write("") 
 
