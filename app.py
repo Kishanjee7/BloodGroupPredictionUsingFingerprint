@@ -561,7 +561,7 @@ h1, h2, h3 {
 
 # ── Sidebar ──
 with st.sidebar:
-    st.markdown("## 🩸 Blood Group Predictor")
+    st.markdown("## Blood Group Predictor")
     st.markdown("---")
 
     st.markdown("### 📋 How to Use")
@@ -608,7 +608,7 @@ except Exception as e:
 st.markdown("""
 <div class="hero-banner">
     <h1>Blood Group Prediction Using Fingerprint</h1>
-    <p>Multi-model AI system analyzing fingerprint ridge patterns</p>
+    <p>Multi-model system analyzing fingerprint ridge patterns</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -795,7 +795,7 @@ else:
         <h3 style="color:#FFFFFF; margin-bottom:0.5rem;">Upload a Fingerprint Image</h3>
         <p style="color:#94A3B8; font-size:1.15rem; font-weight: 500;">
             Drag and drop or click above to upload a fingerprint image.<br>
-            The AI will analyze the ridge patterns and predict the blood group.
+            The model will analyze the ridge patterns and predict the blood group.
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -807,3 +807,4 @@ st.markdown("""
     <a href="https://github.com/Kishanjee7/BloodGroupPredictionUsingFingerprint" target="_blank">GitHub Repository</a>
 </div>
 """, unsafe_allow_html=True)
+
