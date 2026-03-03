@@ -16,10 +16,8 @@ This project explores the correlation between fingerprint patterns and blood gro
 
 ## 🏗️ Architecture
 
-```
-F
-```![tuvyu (1)](https://github.com/user-attachments/assets/6f42bf9f-3675-442d-9564-512fb73f47fd)
 
+![tuvyu (1)](https://github.com/user-attachments/assets/6b7b3861-fc95-4984-a8a1-db7a94d053a0)
 
 ## 🚀 Models Used
 
@@ -93,7 +91,7 @@ The app will open at `http://localhost:8501`
 
 ## 📄 License
 
-This project is for academic/research purposes.
+This project is for academic purposes.
 
 ## 👤 Author
 
