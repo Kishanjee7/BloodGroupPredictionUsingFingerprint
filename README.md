@@ -1,4 +1,4 @@
-# 🩸 Blood Group Prediction Using Fingerprint
+# Blood Group Prediction Using Fingerprint
 
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://bloodgrouppredictionusingfingerprint.streamlit.app/)
 [![Python 3.11](https://img.shields.io/badge/Python-3.11-blue.svg)](https://www.python.org/downloads/)
