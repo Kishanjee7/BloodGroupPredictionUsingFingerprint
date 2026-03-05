@@ -265,6 +265,7 @@ st.set_page_config(
     page_title="Blood Group Predictor",
     page_icon="🩸",
     layout="wide",
+    initial_sidebar_state="expanded",
 )
 
 # ── Custom CSS ──
@@ -272,11 +273,6 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&display=swap');
-
-/* ═══ Hide Sidebar Toggle Completely ═══ */
-[data-testid="collapsedControl"] {
-    display: none;
-}
 
 /* ═══ Keyframe Animations ═══ */
 @keyframes gradientBG {
@@ -303,7 +299,7 @@ st.markdown("""
     --primary-glow: rgba(255, 75, 75, 0.3);
     --text-main: #F8FAFC;
     --text-muted: #CBD5E1;
-    --bg-card: rgba(30, 40, 60, 0.6);
+    --bg-card: rgba(30, 40, 60, 0.6); /* Frosted dark glass */
     --card-border: rgba(255, 255, 255, 0.1);
     --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 }
@@ -325,6 +321,19 @@ p, li, span, div, label {
     animation: gradientBG 15s ease infinite;
 }
 
+/* ═══ Sidebar Styling ═══ */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #0B132B 0%, #1C2541 100%) !important;
+    border-right: 1px solid rgba(255,255,255,0.05);
+}
+[data-testid="stSidebar"] hr {
+    border-color: rgba(255,255,255,0.1) !important;
+}
+[data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
+    color: #FF6B6B !important;
+    font-family: 'Poppins', sans-serif;
+}
+
 /* ═══ Hero Banner ═══ */
 .hero-banner {
     background: rgba(255, 255, 255, 0.03);
@@ -339,6 +348,7 @@ p, li, span, div, label {
     position: relative;
     overflow: hidden;
 }
+/* Banner inner glow */
 .hero-banner::before {
     content: "";
     position: absolute;
@@ -387,19 +397,6 @@ p, li, span, div, label {
     font-weight: 700;
     color: #E2E8F0 !important;
     margin: 10px 0;
-}
-
-/* ═══ Expander Styling ═══ */
-[data-testid="stExpander"] {
-    background: rgba(0, 0, 0, 0.2) !important;
-    border: 1px solid rgba(255,255,255,0.1) !important;
-    border-radius: 12px !important;
-    backdrop-filter: blur(10px);
-}
-[data-testid="stExpander"] summary p {
-    font-weight: 600 !important;
-    font-size: 1.1rem !important;
-    color: #FF6B6B !important;
 }
 
 /* ═══ Blood Group Result Badge ═══ */
@@ -527,7 +524,7 @@ p, li, span, div, label {
     box-shadow: 0 12px 30px rgba(255, 75, 75, 0.5) !important;
 }
 
-/* ═══ Image Preview Area ═══ */
+/* ═══ Image Preview Area (Added Borders for neatness) ═══ */
 [data-testid="stImage"] img {
     border-radius: 12px;
     border: 2px solid rgba(255,255,255,0.1);
@@ -561,6 +558,44 @@ h1, h2, h3 {
 }
 </style>
 """, unsafe_allow_html=True)
+
+# ── Sidebar ──
+with st.sidebar:
+    st.markdown("## 🩸 Blood Group Predictor")
+    st.markdown("---")
+
+    st.markdown("### 📋 How to Use")
+    st.markdown("""
+    1. **Upload** a fingerprint image
+    2. **Preview** original & enhanced images
+    3. Click **🔬 Analyze Fingerprint**
+    4. View predictions from **5 models**
+    """)
+
+    st.markdown("---")
+    st.markdown("### 🧠 Models")
+    model_info = {
+        "RF-HOG": "Random Forest on HOG features",
+        "RF-Gabor": "Random Forest on Gabor features",
+        "CNN": "Custom convolutional neural network",
+        "MobileNetV2": "Transfer learning (pretrained)",
+        "Ensemble": "Stacking meta-learner (final)",
+    }
+    for name, desc in model_info.items():
+        st.markdown(f"**{name}** — {desc}")
+
+    st.markdown("---")
+    st.markdown("### 🩸 Supported Blood Groups")
+    st.markdown("`A+` `A-` `B+` `B-` `AB+` `AB-` `O+` `O-`")
+
+    st.markdown("---")
+    with st.expander("⚙️ Runtime diagnostics"):
+        st.caption(f"TensorFlow: {tf.__version__}")
+        st.caption(f"Keras available: {standalone_keras is not None}")
+        diag_rows = []
+        for k, p in PATHS.items():
+            diag_rows.append({"artifact": k, "exists": "✅" if os.path.exists(p) else "❌"})
+        st.dataframe(pd.DataFrame(diag_rows), use_container_width=True, hide_index=True)
 
 # ── Load models ──
 try:
@@ -599,45 +634,6 @@ for col, (name, loaded, icon) in zip(status_cols, model_statuses):
 
 st.write("") # Spacer
 
-# ── Information Panel (Moved from Sidebar) ──
-with st.expander("ℹ️ Instructions & Model Information", expanded=True):
-    info_col1, info_col2, info_col3 = st.columns([1, 1.2, 1])
-    
-    with info_col1:
-        st.markdown("### 📋 How to Use")
-        st.markdown("""
-        1. **Upload** a fingerprint image.
-        2. **Preview** the original & enhanced images.
-        3. Click **🔬 Analyze Fingerprint**.
-        4. View predictions from all **5 models**.
-        """)
-        st.markdown("### 🩸 Supported Groups")
-        st.markdown("`A+` `A-` `B+` `B-` `AB+` `AB-` `O+` `O-`")
-
-    with info_col2:
-        st.markdown("### 🧠 Models")
-        model_info = {
-            "RF-HOG": "Random Forest on HOG features",
-            "RF-Gabor": "Random Forest on Gabor features",
-            "CNN": "Custom convolutional neural network",
-            "MobileNetV2": "Transfer learning (pretrained)",
-            "Ensemble": "Stacking meta-learner (final)",
-        }
-        for name, desc in model_info.items():
-            st.markdown(f"**{name}** — {desc}")
-
-    with info_col3:
-        st.markdown("### ⚙️ Diagnostics")
-        st.caption(f"TensorFlow Version: {tf.__version__}")
-        st.caption(f"Keras Available: {'Yes' if standalone_keras is not None else 'No'}")
-        
-        diag_rows = []
-        for k, p in PATHS.items():
-            diag_rows.append({"File": k, "Status": "✅" if os.path.exists(p) else "❌"})
-        st.dataframe(pd.DataFrame(diag_rows), use_container_width=True, hide_index=True)
-
-st.write("---") 
-
 # ── Upload ──
 uploaded = st.file_uploader(
     "📤 Upload a fingerprint image",
@@ -653,6 +649,7 @@ if uploaded is not None:
 
     st.markdown("<h3 style='text-align: center; margin-top: 20px;'>🔍 Image Preview</h3>", unsafe_allow_html=True)
     
+    # Increased image size by adjusting column ratios and re-enabling use_container_width
     col_spacer1, c1, c2, col_spacer2 = st.columns([1, 3, 3, 1])
     with c1:
         st.image(orig, caption="📷 Original Fingerprint", use_container_width=True) 
