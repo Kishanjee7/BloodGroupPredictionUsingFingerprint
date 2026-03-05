@@ -561,7 +561,7 @@ h1, h2, h3 {
 
 # ── Sidebar ──
 with st.sidebar:
-    st.markdown("## 🩸 Blood Group Predictor")
+    st.markdown("## Blood Group Predictor")
     st.markdown("---")
 
     st.markdown("### 📋 How to Use")
