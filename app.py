@@ -1,212 +1,139 @@
-import os
-import cv2
-import time
-import joblib
-import numpy as np
 import streamlit as st
-import plotly.graph_objects as go
+import numpy as np
+import cv2
 from PIL import Image
-from skimage.feature import hog
-from skimage.filters import gabor
-import tensorflow as tf
-from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 
-# ==============================
-# CONFIG
-# ==============================
+# -----------------------
+# Config
+# -----------------------
+IMG_SIZE = (128, 128)
+
 st.set_page_config(
-    page_title="BloodAI Neural Interface",
-    page_icon="🧬",
+    page_title="Blood Group Predictor",
+    page_icon="🩸",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded",
 )
 
-IMG_SIZE = (128, 128)
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_DIR = os.path.join(BASE_DIR, "saved_models")
+# -----------------------
+# Sidebar (UI only)
+# -----------------------
+with st.sidebar:
+    st.markdown("## 🩸 Blood Group Predictor")
+    st.markdown("---")
 
-# ==============================
-# LOAD MODELS
-# ==============================
-@st.cache_resource
-def load_models():
-    rf_hog = joblib.load(os.path.join(MODEL_DIR, "rf_hog.joblib"))
-    rf_gabor = joblib.load(os.path.join(MODEL_DIR, "rf_gabor.joblib"))
-    ensemble = joblib.load(os.path.join(MODEL_DIR, "ensemble_logreg.joblib"))
-    label_encoder = joblib.load(os.path.join(MODEL_DIR, "label_encoder.joblib"))
+    st.markdown("### 📋 How to Use")
+    st.markdown("""
+    1. Upload a fingerprint image  
+    2. Preview image  
+    3. Click Analyze  
+    4. View prediction  
+    """)
 
-    cnn = tf.keras.models.load_model(os.path.join(MODEL_DIR, "cnn_model.h5"), compile=False)
-    mnet = tf.keras.models.load_model(os.path.join(MODEL_DIR, "mobilenet_model.h5"), compile=False)
+    st.markdown("---")
+    st.markdown("### 🧠 Models (Demo)")
+    st.markdown("""
+    - RF-HOG  
+    - RF-Gabor  
+    - CNN  
+    - MobileNetV2  
+    - Ensemble  
+    """)
 
-    return rf_hog, rf_gabor, cnn, mnet, ensemble, label_encoder
-
-rf_hog, rf_gabor, cnn_model, mnet_model, ensemble_model, label_encoder = load_models()
-
-# ==============================
-# TESLA UI CSS
-# ==============================
+# -----------------------
+# Hero Section
+# -----------------------
 st.markdown("""
-<style>
-html, body, [class*="css"] {
-    background-color: #000;
-    color: #E0E0E0;
-    font-family: 'Orbitron', sans-serif;
-}
-.navbar {
-    position: sticky;
-    top: 0;
-    padding: 1rem 2rem;
-    backdrop-filter: blur(10px);
-    background: rgba(0,0,0,0.6);
-    display:flex;
-    justify-content:space-between;
-    border-bottom:1px solid rgba(255,255,255,0.1);
-}
-.nav-title { font-weight:700; font-size:1.3rem; }
-.neon {
-    border:2px solid #00F5FF;
-    box-shadow:0 0 10px #00F5FF,0 0 30px #00F5FF;
-    border-radius:16px;
-    padding:2rem;
-}
-@keyframes rotate3d {
-  0% { transform: rotateY(0deg); }
-  100% { transform: rotateY(360deg); }
-}
-.rotate3d { animation: rotate3d 8s linear infinite; }
-@keyframes scan {
-  0% { top:0%; }
-  100% { top:100%; }
-}
-.scan-line {
-    position:absolute;
-    width:100%;
-    height:4px;
-    background:rgba(0,255,255,0.6);
-    animation: scan 2s linear infinite;
-}
-* { transition: all 0.3s ease; }
-</style>
-""", unsafe_allow_html=True)
-
-# ==============================
-# NAVBAR
-# ==============================
-st.markdown("""
-<div class="navbar">
-  <div class="nav-title">🧬 BLOODAI NEURAL SYSTEM</div>
-  <div>Fingerprint Intelligence Engine</div>
+<div style="text-align:center;padding:2rem;background:linear-gradient(90deg,#1D3557,#E63946);border-radius:20px;color:white;">
+<h1>🩸 Blood Group Prediction Using Fingerprint</h1>
+<p>Frontend UI Demo Version (No Backend)</p>
 </div>
 """, unsafe_allow_html=True)
 
-st.markdown("<h1 style='text-align:center;margin-top:30px;'>Neural Blood Group Detection</h1>", unsafe_allow_html=True)
+st.markdown("---")
 
-# ==============================
-# PREPROCESS FUNCTIONS
-# ==============================
-def enhance(img):
-    img = cv2.GaussianBlur(img, (5,5), 0)
-    return img
+# -----------------------
+# Model Status Cards (Static)
+# -----------------------
+cols = st.columns(5)
+models = ["RF-HOG", "RF-Gabor", "CNN", "MobileNetV2", "Ensemble"]
 
-def get_hog_feature(img):
-    f = hog(img, orientations=9, pixels_per_cell=(16,16),
-            cells_per_block=(2,2), block_norm="L2-Hys")
-    return f.reshape(1,-1)
-
-def get_gabor_feature(img):
-    real, imag = gabor(img, frequency=0.3)
-    return np.array([real.mean(), real.var(), imag.mean(), imag.var()]).reshape(1,-1)
-
-def prep_cnn(img):
-    return np.expand_dims(img, axis=(0,-1))
-
-def prep_mnet(img):
-    x = np.repeat(np.expand_dims(img,axis=-1),3,axis=-1)
-    x = preprocess_input(x*255.0)
-    return np.expand_dims(x,axis=0)
-
-# ==============================
-# FILE UPLOAD
-# ==============================
-uploaded = st.file_uploader("Upload Fingerprint Image", type=["png","jpg","jpeg"])
-
-if uploaded:
-
-    image = Image.open(uploaded).convert("L")
-    image = np.array(image)/255.0
-    image = cv2.resize(image, IMG_SIZE)
-    enhanced = enhance(image)
-
-    # 3D rotating fingerprint animation
-    st.markdown("""
-    <div style="position:relative;text-align:center;">
-        <img src="https://cdn-icons-png.flaticon.com/512/565/565547.png"
-             width="220"
-             class="rotate3d">
-        <div class="scan-line"></div>
+for col, model in zip(cols, models):
+    col.markdown(f"""
+    <div style="padding:1rem;background:#f4f4f4;border-radius:12px;text-align:center;">
+    <h4>{model}</h4>
+    <span style="color:green;font-weight:bold;">Ready (Demo)</span>
     </div>
     """, unsafe_allow_html=True)
 
-    # Sound effect
-    st.markdown("""
-    <audio autoplay>
-      <source src="https://assets.mixkit.co/sfx/preview/mixkit-robotic-interface-beep-2579.mp3" type="audio/mpeg">
-    </audio>
-    """, unsafe_allow_html=True)
+st.markdown("---")
 
-    # Progress animation
-    progress = st.progress(0)
-    for i in range(100):
-        time.sleep(0.02)
-        progress.progress(i+1)
-    progress.empty()
+# -----------------------
+# Upload Section
+# -----------------------
+uploaded = st.file_uploader(
+    "📤 Upload a fingerprint image",
+    type=["png", "jpg", "jpeg", "bmp"]
+)
 
-    # ==============================
-    # PREDICTION
-    # ==============================
-    p_rf_hog = rf_hog.predict_proba(get_hog_feature(enhanced))[0]
-    p_rf_gabor = rf_gabor.predict_proba(get_gabor_feature(enhanced))[0]
-    p_cnn = cnn_model.predict(prep_cnn(enhanced), verbose=0)[0]
-    p_mnet = mnet_model.predict(prep_mnet(enhanced), verbose=0)[0]
+if uploaded is not None:
 
-    stack = np.concatenate([p_rf_hog,p_rf_gabor,p_cnn,p_mnet]).reshape(1,-1)
-    p_ens = ensemble_model.predict_proba(stack)[0]
+    img = Image.open(uploaded).convert("L")
+    img_np = np.array(img).astype(np.float32) / 255.0
+    img_np = cv2.resize(img_np, IMG_SIZE)
 
-    classes = label_encoder.classes_
-    idx = np.argmax(p_ens)
-    final_label = classes[idx]
-    final_conf = round(p_ens[idx]*100,1)
+    st.markdown("### 🔍 Image Preview")
+    c1, c2 = st.columns(2)
 
-    # ==============================
-    # RESULT DISPLAY
-    # ==============================
-    st.markdown(f"""
-    <div class="neon" style="text-align:center;margin-top:40px;">
-        <h2 style="font-size:4rem;color:#00F5FF;">{final_label}</h2>
-        <p style="font-size:1.5rem;">Confidence: {final_conf}%</p>
-    </div>
-    """, unsafe_allow_html=True)
+    with c1:
+        st.image(img_np, caption="Original", use_container_width=True)
 
-    # ==============================
-    # MODEL COMPARISON CHART
-    # ==============================
-    fig = go.Figure()
-    fig.add_trace(go.Bar(
-        x=["RF-HOG","RF-Gabor","CNN","MobileNet","Ensemble"],
-        y=[
-            max(p_rf_hog)*100,
-            max(p_rf_gabor)*100,
-            max(p_cnn)*100,
-            max(p_mnet)*100,
-            max(p_ens)*100
-        ]
-    ))
-    fig.update_layout(
-        template="plotly_dark",
-        title="Model Confidence Comparison",
-        height=400
-    )
-    st.plotly_chart(fig, use_container_width=True)
+    with c2:
+        st.image(img_np, caption="Enhanced (Demo)", use_container_width=True)
+
+    st.markdown("---")
+
+    if st.button("🔬 Analyze Fingerprint", use_container_width=True):
+
+        # -----------------------
+        # Dummy Prediction (Static)
+        # -----------------------
+        blood_groups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
+        probs = np.array([10, 5, 15, 8, 12, 6, 35, 9])
+        probs = probs / probs.sum()
+
+        final_idx = np.argmax(probs)
+        final_label = blood_groups[final_idx]
+        final_conf = probs[final_idx] * 100
+
+        st.markdown("### 🎯 Final Prediction (Demo)")
+
+        st.markdown(f"""
+        <div style="text-align:center;">
+        <h1 style="color:#E63946;font-size:60px;">{final_label}</h1>
+        <h3>Confidence: {final_conf:.1f}%</h3>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("---")
+        st.markdown("### 📈 Probability Distribution (Demo)")
+
+        for bg, p in zip(blood_groups, probs):
+            st.progress(float(p))
 
 else:
-    st.markdown("<h3 style='text-align:center;margin-top:100px;color:#444;'>Awaiting Neural Input...</h3>", unsafe_allow_html=True)
+    st.markdown("""
+    <div style="text-align:center;padding:3rem;">
+    <h3>Upload a fingerprint image to see the UI demo.</h3>
+    </div>
+    """, unsafe_allow_html=True)
+
+# -----------------------
+# Footer
+# -----------------------
+st.markdown("""
+<hr>
+<p style="text-align:center;color:gray;">
+Frontend UI Demo Only • No ML Backend Connected
+</p>
+""", unsafe_allow_html=True)
