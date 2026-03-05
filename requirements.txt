@@ -13,3 +13,4 @@ streamlit>=1.24.0
 h5py
 Pillow
 protobuf>=3.20,<5
+plotly
