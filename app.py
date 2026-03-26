@@ -803,7 +803,7 @@ else:
 # ── Footer ──
 st.markdown("""
 <div class="footer-text">
-    Built with ❤️ using Streamlit & TensorFlow • 
+    Built with ❤️ • 
     <a href="https://github.com/Kishanjee7/BloodGroupPredictionUsingFingerprint" target="_blank">GitHub Repository</a>
 </div>
 """, unsafe_allow_html=True)
